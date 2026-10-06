@@ -7,5 +7,6 @@ services:
         arguments:
             phpstanCommand: %latte.features.phpstanCommand%
             maxTemplateVariants: %latte.maxTemplateVariants%
+            breakIncludeCycles: %latte.breakIncludeCycles%
         tags:
             - phpstan.rules.rule
