@@ -32,6 +32,7 @@ parameters:
         resolveAllPossiblePaths: false
         reportUnanalysedTemplates: false
         collectedPaths: []
+        templateTypes: []
         features:
             transformDynamicFormControlNamesToString: false
             phpstanCommand: null
@@ -63,6 +64,7 @@ parametersSchema:
         resolveAllPossiblePaths: bool()
         reportUnanalysedTemplates: bool()
         collectedPaths: arrayOf(string())
+        templateTypes: arrayOf(string())
         features: structure([
             transformDynamicFormControlNamesToString: bool()
             phpstanCommand: schema(string(), nullable())
@@ -135,7 +137,7 @@ services:
 
     # Type resolvers
     - Efabrica\PHPStanLatte\Resolver\TypeResolver\TypeResolver
-    - Efabrica\PHPStanLatte\Resolver\TypeResolver\TemplateTypeResolver
+    - Efabrica\PHPStanLatte\Resolver\TypeResolver\TemplateTypeResolver(%latte.templateTypes%)
 
     # Value resolvers
     - Efabrica\PHPStanLatte\Resolver\ValueResolver\ValueResolver()
