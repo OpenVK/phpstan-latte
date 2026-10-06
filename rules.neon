@@ -6,5 +6,6 @@ services:
         factory: Efabrica\PHPStanLatte\Rule\LatteTemplatesRule()
         arguments:
             phpstanCommand: %latte.features.phpstanCommand%
+            maxTemplateVariants: %latte.maxTemplateVariants%
         tags:
             - phpstan.rules.rule
