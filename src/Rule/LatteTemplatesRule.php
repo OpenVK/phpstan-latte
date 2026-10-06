@@ -38,6 +38,7 @@ use function array_values;
 use function count;
 use function dirname;
 use function get_class;
+use function in_array;
 use function is_dir;
 use function is_file;
 use function is_string;
@@ -87,6 +88,8 @@ final class LatteTemplatesRule implements Rule
 
     private int $maxTemplateVariants;
 
+    private bool $breakIncludeCycles;
+
     /**
      * @param LatteTemplateResolverInterface[] $latteTemplateResolvers
      * @param TemplateRenderCollector[] $templateRenderCollectors
@@ -104,7 +107,8 @@ final class LatteTemplatesRule implements Rule
         TemplateContextHelper $templateContextHelper,
         TempDirResolver $tempDirResolver,
         ?string $phpstanCommand,
-        int $maxTemplateVariants = 0
+        int $maxTemplateVariants = 0,
+        bool $breakIncludeCycles = false
     ) {
         $this->latteTemplateResolvers = $latteTemplateResolvers;
         $this->latteToPhpCompiler = $latteToPhpCompiler;
@@ -119,6 +123,7 @@ final class LatteTemplatesRule implements Rule
         $this->tempDirResolver = $tempDirResolver;
         $this->phpstanCommand = $phpstanCommand;
         $this->maxTemplateVariants = $maxTemplateVariants;
+        $this->breakIncludeCycles = $breakIncludeCycles;
     }
 
     public function getNodeType(): string
@@ -245,6 +250,9 @@ final class LatteTemplatesRule implements Rule
                         );
                     } else {
                         $includedTemplatePath = realpath($includedTemplatePath) ?: $includedTemplatePath;
+                        if ($this->breakIncludeCycles && ($includedTemplatePath === $template->getPath() || in_array($includedTemplatePath, $template->getParentTemplatePaths(), true))) {
+                            continue; // include cycle: contexts degrade and their number explodes
+                        }
                         $includeTemplate = new Template(
                             $includedTemplatePath,
                             $template->getActualClass(),
