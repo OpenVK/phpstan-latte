@@ -33,6 +33,7 @@ parameters:
         reportUnanalysedTemplates: false
         maxTemplateVariants: 0
         breakIncludeCycles: false
+        resolveTypes: true
         collectedPaths: []
         templateTypes: []
         features:
@@ -67,6 +68,7 @@ parametersSchema:
         reportUnanalysedTemplates: bool()
         maxTemplateVariants: int()
         breakIncludeCycles: bool()
+        resolveTypes: bool()
         collectedPaths: arrayOf(string())
         templateTypes: arrayOf(string())
         features: structure([
@@ -124,6 +126,7 @@ services:
         factory: Efabrica\PHPStanLatte\Compiler\Postprocessor
         arguments:
             parser: @latteCurrentPhpVersionRichParser
+            resolveTypes: %latte.resolveTypes%
 
     - Efabrica\PHPStanLatte\Compiler\TypeToPhpDoc
     - Efabrica\PHPStanLatte\Compiler\Helper\TemplateContextHelper
