@@ -102,7 +102,7 @@ final class Postprocessor
         if ($realPath === '') {
             return '';
         }
-        require($compileFilePath); // load type definitions from compiled template
+        require_once($compileFilePath); // load type definitions from compiled template
 
         $scope = $this->scopeFactory->create(ScopeContext::create($realPath));
 
