@@ -31,6 +31,7 @@ parameters:
         extensions: []
         resolveAllPossiblePaths: false
         reportUnanalysedTemplates: false
+        maxTemplateVariants: 0
         collectedPaths: []
         templateTypes: []
         features:
@@ -63,6 +64,7 @@ parametersSchema:
         extensions: arrayOf(object())
         resolveAllPossiblePaths: bool()
         reportUnanalysedTemplates: bool()
+        maxTemplateVariants: int()
         collectedPaths: arrayOf(string())
         templateTypes: arrayOf(string())
         features: structure([
