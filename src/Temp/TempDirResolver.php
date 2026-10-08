@@ -39,7 +39,7 @@ final class TempDirResolver
         }
 
         if (!is_dir($tmpDir)) {
-            Filesystem::createDir($tmpDir);
+            FileSystem::createDir($tmpDir);
         }
         $tmpDir = realpath($tmpDir) ?: $tmpDir;
         if (!is_writable($tmpDir)) {
@@ -71,7 +71,7 @@ final class TempDirResolver
         );
         /** @var SplFileInfo $file */
         foreach ($ri as $file) {
-            Filesystem::delete($file->getPathname());
+            FileSystem::delete($file->getPathname());
         }
     }
 
