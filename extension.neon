@@ -5,6 +5,7 @@ parameters:
         - stubs/Latte/Essential/Filters.stub
         - stubs/Latte/Runtime/FilterInfo.stub
         - stubs/Latte/Runtime/Filters.stub
+        - stubs/Latte/Runtime/HtmlHelpers.stub
         - stubs/Latte/Runtime/Helpers.stub
         - stubs/Latte/Runtime/HtmlStringable.stub
         - stubs/Latte/Runtime/Html.stub
