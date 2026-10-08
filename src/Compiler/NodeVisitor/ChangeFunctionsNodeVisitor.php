@@ -160,7 +160,7 @@ final class ChangeFunctionsNodeVisitor extends NodeVisitorAbstract implements Fu
         }
 
         $methodName = $reflection->getName();
-        if ($methodName === '' || $methodName[0] === '{' || !$scopeClass->hasMethod($methodName)) {
+        if ($methodName[0] === '{' || !$scopeClass->hasMethod($methodName)) {
             return null;
         }
 

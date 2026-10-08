@@ -151,7 +151,7 @@ final class ChangeFiltersNodeVisitor extends NodeVisitorAbstract implements Filt
         }
 
         $methodName = $reflection->getName();
-        if ($methodName === '' || $methodName[0] === '{' || !$scopeClass->hasMethod($methodName)) {
+        if ($methodName[0] === '{' || !$scopeClass->hasMethod($methodName)) {
             return null;
         }
 
