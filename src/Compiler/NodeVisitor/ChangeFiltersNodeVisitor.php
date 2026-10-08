@@ -46,6 +46,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\ClosureTypeFactory;
 use PHPStan\Type\ObjectType;
 use PHPStan\Type\ThisType;
+use ReflectionFunction;
 use function array_merge;
 use function explode;
 use function get_class;
@@ -134,6 +135,29 @@ final class ChangeFiltersNodeVisitor extends NodeVisitorAbstract implements Filt
         return is_string($filter) && (str_starts_with($filter, 'Closure(') || str_starts_with($filter, '\Closure(') || str_starts_with($filter, 'callable('));
     }
 
+    /**
+     * Latte 3.1+ registers filters as first-class callables (Closure objects) instead of
+     * array callables. Detect them and convert back to [class, method] so the underlying
+     * method is used (and stubs for Latte built-in filters apply again).
+     *
+     * @return array{string, string}|null
+     */
+    private function resolveFirstClassCallable(Closure $filter): ?array
+    {
+        $reflection = new ReflectionFunction($filter);
+        $scopeClass = $reflection->getClosureScopeClass();
+        if ($scopeClass === null) {
+            return null;
+        }
+
+        $methodName = $reflection->getName();
+        if ($methodName === '' || $methodName[0] === '{' || !$scopeClass->hasMethod($methodName)) {
+            return null;
+        }
+
+        return [$scopeClass->getName(), $methodName];
+    }
+
     private function addFilterVariables(ClassMethod $node): void
     {
         $class = $node->getAttribute('parent');
@@ -182,6 +206,10 @@ final class ChangeFiltersNodeVisitor extends NodeVisitorAbstract implements Filt
     {
         $variables = [];
         foreach ($this->filters as $filterName => $filter) {
+            if ($filter instanceof Closure) {
+                $filter = $this->resolveFirstClassCallable($filter) ?? $filter;
+            }
+
             if ($this->isCallableString($filter)) {
                 $variableName = $this->createFilterVariableName($filterName);
                 /** @var string $filter */
@@ -203,7 +231,7 @@ final class ChangeFiltersNodeVisitor extends NodeVisitorAbstract implements Filt
             $className = is_string($filter[0]) ? $filter[0] : get_class($filter[0]);
             $methodName = $filter[1];
 
-            if (!is_string($methodName) || $methodName === '') {
+            if ($methodName === '') {
                 continue;
             }
 
@@ -237,6 +265,10 @@ final class ChangeFiltersNodeVisitor extends NodeVisitorAbstract implements Filt
         $filter = $this->filters[$filterName] ?? null;
         if ($filter === null) {
             return null;
+        }
+
+        if ($filter instanceof Closure) {
+            $filter = $this->resolveFirstClassCallable($filter) ?? $filter;
         }
 
         if ($filter instanceof Closure || $this->isCallableString($filter)) {
