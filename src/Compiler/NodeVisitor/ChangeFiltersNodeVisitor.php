@@ -155,7 +155,7 @@ final class ChangeFiltersNodeVisitor extends NodeVisitorAbstract implements Filt
                 $variableType = $variableType->getStaticObjectType();
             }
 
-            $arrayShapeItems[] = new ArrayShapeItemNode(new ConstExprStringNode($variable->getName(), ConstExprStringNode::SINGLE_QUOTED), $variable->mightBeUndefined(), $variableType->toPhpDocNode());
+            $arrayShapeItems[] = new ArrayShapeItemNode(new ConstExprStringNode($variable->getName(), ConstExprStringNode::SINGLE_QUOTED), $variable->mightBeUndefined(), TypeHelper::toPhpDocNode($variableType));
         }
 
         if ($arrayShapeItems === []) {
