@@ -911,11 +911,6 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 10,
                 '@layout.latte',
             ],
-            [
-                'Cannot convert array<mixed>|string to HTML string.',
-                22,
-                'default.latte',
-            ],
         ];
 
         if (LatteVersion::isLatte3()) {
@@ -924,19 +919,40 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 2,
                 'translate_new.latte',
             ];
+            if (LatteVersion::isLatte31()) {
+                // Latte 3.1 declares native types on built-in filters. PHPStan stub PHPDoc
+                // can only narrow native types, so the permissive FilterString stub no longer
+                // widens |lower/|upper/|capitalize, and the native |slice return type
+                // (including Generator) leaks into the escape checks.
+                $filterStringType = 'string|Stringable|null';
+                $sliceReturnType = 'array<mixed>|Generator|string';
+                $expectedErrors[] = [
+                    'Parameter #3 $s of static method Latte\Runtime\Helpers::convertTo() expects string, mixed given.',
+                    22,
+                    'default.latte',
+                ];
+            } else {
+                $filterStringType = 'bool|float|int|string|Stringable|null';
+                $sliceReturnType = 'array<mixed>|string';
+            }
             $expectedErrors[] = [
-                'Parameter #1 $s of static method Latte\Essential\Filters::lower() expects bool|float|int|string|Stringable|null, stdClass given.',
+                'Parameter #1 $s of static method Latte\Essential\Filters::lower() expects ' . $filterStringType . ', stdClass given.',
                 19,
                 'default.latte',
             ];
             $expectedErrors[] = [
-                'Parameter #1 $s of static method Latte\Essential\Filters::upper() expects bool|float|int|string|Stringable|null, stdClass given.',
+                'Parameter #1 $s of static method Latte\Essential\Filters::upper() expects ' . $filterStringType . ', stdClass given.',
                 20,
                 'default.latte',
             ];
             $expectedErrors[] = [
-                'Parameter #1 $s of static method Latte\Essential\Filters::capitalize() expects bool|float|int|string|Stringable|null, stdClass given.',
+                'Parameter #1 $s of static method Latte\Essential\Filters::capitalize() expects ' . $filterStringType . ', stdClass given.',
                 21,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Cannot convert ' . $sliceReturnType . ' to HTML string.',
+                22,
                 'default.latte',
             ];
             $expectedErrors[] = [
@@ -976,6 +992,11 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
             $expectedErrors[] = [
                 'Parameter #1 $s of static method Latte\Runtime\Filters::capitalize() expects ' . $filterStringType . ', stdClass given.',
                 21,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Cannot convert array<mixed>|string to HTML string.',
+                22,
                 'default.latte',
             ];
             $expectedErrors[] = [
