@@ -31,13 +31,17 @@ final class LayoutPathResolver
         }
 
         $templateContent = file_get_contents($templatePath) ?: '';
-        preg_match(
+        $matches = [];
+        if (preg_match(
             '/\{(?:layout|extend|extends)\s+(?:[\'"](?<quoted>[^\'"]+)[\'"]|(?<bare>[^\s,}]+))/',
             $templateContent,
-            $match
-        );
-
-        $layoutName = $match['quoted'] ?? $match['bare'] ?? null;
+            $matches
+        ) === 1) {
+            // "bare" is the only key PHP can leave unset (see preg_match named-group behavior)
+            $layoutName = isset($matches['bare']) ? $matches['bare'] : $matches['quoted'];
+        } else {
+            $layoutName = null;
+        }
         if ($layoutName !== null && !in_array($layoutName, ['none', 'auto'], true)) {
             $layoutFilePath = realpath(dirname($templatePath) . DIRECTORY_SEPARATOR . $layoutName) ?: null;
             if ($layoutFilePath !== null) {

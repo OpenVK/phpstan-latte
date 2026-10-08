@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Efabrica\PHPStanLatte\Compiler\Compiler;
 
+use Efabrica\PHPStanLatte\Compiler\LatteVersion;
 use Latte\Compiler\TemplateGenerator;
 use Latte\Engine;
 use Latte\Essential\RawPhpExtension;
@@ -19,7 +20,6 @@ use function implode;
 use function is_array;
 use function is_object;
 use function md5;
-use function method_exists;
 use function preg_replace;
 use function str_replace;
 
@@ -90,7 +90,7 @@ final class Latte3Compiler extends AbstractCompiler
         $this->engine->applyPasses($templateNode);
         $className = $this->generateClassName();
         $templateGenerator = new TemplateGenerator();
-        if (method_exists($templateGenerator, 'buildClass')) {
+        if (LatteVersion::isLatte31()) {
             // Latte 3.1+ (TemplateGenerator::generate() was split into buildClass() + generateCode())
             $templateGenerator->buildClass($templateNode);
             $phpContent = $templateGenerator->generateCode($className, null, $this->strictMode);
