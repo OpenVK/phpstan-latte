@@ -13,4 +13,13 @@ class Runtime
     public static function item($item, $global): object
     {
     }
+
+    /**
+     * @param \Nette\Forms\Control|\Nette\Forms\Container|string|int $item
+     * @param string $type
+     * @return ($type is 'Nette\Forms\Container' ? \Nette\Forms\Container : \Nette\Forms\Controls\BaseControl)
+     */
+    public function get($item, $type = \Nette\Forms\Control::class)
+    {
+    }
 }
