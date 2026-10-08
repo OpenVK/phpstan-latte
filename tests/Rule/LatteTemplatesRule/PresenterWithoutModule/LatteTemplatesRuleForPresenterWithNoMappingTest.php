@@ -22,7 +22,7 @@ class LatteTemplatesRuleForPresenterWithNoMappingTest extends LatteTemplatesRule
     public function testLinks(): void
     {
         // Without mapping only handle links are created, no other errors should be found
-        $this->analyse([__DIR__ . '/Fixtures/LinksPresenter.php'], [
+        $expectedErrors = [
             [
                 'Parameter #1 $id of method ' . LinksPresenter::class . '::handleDelete() expects string, null given.',
                 97,
@@ -108,6 +108,32 @@ class LatteTemplatesRuleForPresenterWithNoMappingTest extends LatteTemplatesRule
                 10,
                 '@layout.latte',
             ],
-        ]);
+        ];
+        if (!$this->usesSeparatedPhpStanCommand()) {
+            // PHPStan 2.3 dead-code and repeated-assignment checks on generated template code;
+            // the separated phpstan command does not report them.
+            $expectedErrors[] = [
+                'Variable $ʟ_tmp is assigned value array{aa: 1, bb: 1} but it already has that value.',
+                7,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Variable $ʟ_tmp is assigned value array{aa: 1, bb: 1} but it already has that value.',
+                101,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $ʟ_fi is never read.',
+                102,
+                'default.latte',
+            ];
+        }
+
+        $this->analyse([__DIR__ . '/Fixtures/LinksPresenter.php'], $expectedErrors);
+    }
+
+    protected function usesSeparatedPhpStanCommand(): bool
+    {
+        return false;
     }
 }
