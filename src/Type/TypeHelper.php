@@ -6,6 +6,12 @@ namespace Efabrica\PHPStanLatte\Type;
 
 use InvalidArgumentException;
 use LogicException;
+use PHPStan\PhpDocParser\Ast\AbstractNodeVisitor;
+use PHPStan\PhpDocParser\Ast\Node;
+use PHPStan\PhpDocParser\Ast\NodeTraverser;
+use PHPStan\PhpDocParser\Ast\Type\GenericTypeNode;
+use PHPStan\PhpDocParser\Ast\Type\IdentifierTypeNode;
+use PHPStan\PhpDocParser\Ast\Type\TypeNode;
 use PHPStan\PhpDocParser\Printer\Printer;
 use PHPStan\Reflection\ParametersAcceptor;
 use PHPStan\Type\ErrorType;
@@ -14,6 +20,7 @@ use PHPStan\Type\ObjectType;
 use PHPStan\Type\StaticType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeTraverser;
+use function array_map;
 use function count;
 
 final class TypeHelper
@@ -86,6 +93,47 @@ final class TypeHelper
         }
         $classNames = $params[0]->getType()->getObjectClassNames();
         return $classNames[0] ?? null;
+    }
+
+    /**
+     * PHPDoc node of the type with bare iterables expanded to explicit "mixed" type arguments.
+     *
+     * Latte 3.1 registers its built-in filters and functions as first-class callables, so their
+     * resolved closure types embed bare "array"/"iterable"/"Traversable"/"Generator" types which
+     * would trigger missingType errors in the generated templates.
+     */
+    public static function toPhpDocNode(Type $type): TypeNode
+    {
+        $traverser = new NodeTraverser([
+            new class extends AbstractNodeVisitor {
+                public function enterNode(Node $node): ?Node
+                {
+                    if (!$node instanceof IdentifierTypeNode || $node->getAttribute('latteTypeExpanded')) {
+                        return null;
+                    }
+
+                    $typeNames = match ($node->name) {
+                        'array', 'iterable', 'Traversable', 'Iterator' => ['mixed', 'mixed'],
+                        'Generator' => ['mixed', 'mixed', 'mixed', 'mixed'],
+                        default => null,
+                    };
+                    if ($typeNames === null) {
+                        return null;
+                    }
+
+                    $identifier = new IdentifierTypeNode($node->name);
+                    $identifier->setAttribute('latteTypeExpanded', true);
+                    return new GenericTypeNode($identifier, array_map(
+                        static fn (string $typeName): IdentifierTypeNode => new IdentifierTypeNode($typeName),
+                        $typeNames
+                    ));
+                }
+            },
+        ]);
+
+        /** @var TypeNode[] $nodes */
+        $nodes = $traverser->traverse([$type->toPhpDocNode()]);
+        return $nodes[0];
     }
 
     public static function serializeType(Type $type): string

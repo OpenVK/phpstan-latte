@@ -164,7 +164,7 @@ final class ChangeFunctionsNodeVisitor extends NodeVisitorAbstract implements Fu
                 $variableType = $variableType->getStaticObjectType();
             }
 
-            $arrayShapeItems[] = new ArrayShapeItemNode(new ConstExprStringNode($variable->getName(), ConstExprStringNode::SINGLE_QUOTED), $variable->mightBeUndefined(), $variableType->toPhpDocNode());
+            $arrayShapeItems[] = new ArrayShapeItemNode(new ConstExprStringNode($variable->getName(), ConstExprStringNode::SINGLE_QUOTED), $variable->mightBeUndefined(), TypeHelper::toPhpDocNode($variableType));
         }
 
         if ($arrayShapeItems === []) {
