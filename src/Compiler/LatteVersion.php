@@ -17,4 +17,9 @@ final class LatteVersion
     {
         return Engine::VERSION_ID >= 30000;
     }
+
+    public static function isLatte31(): bool
+    {
+        return Engine::VERSION_ID >= 30100;
+    }
 }
