@@ -158,6 +158,8 @@ parameters:
                 - '#^Call to an undefined method Latte\\Engine\:\:applyPasses\(\)\.$#'
                 - '#^Instantiated class Latte\\Compiler\\TemplateGenerator not found\.$#'
                 - '#^Call to method generate\(\) on an unknown class Latte\\Compiler\\TemplateGenerator\.$#'
+                - '#^Call to method buildClass\(\) on an unknown class Latte\\Compiler\\TemplateGenerator\.$#'
+                - '#^Call to method generateCode\(\) on an unknown class Latte\\Compiler\\TemplateGenerator\.$#'
                 - '#^Call to an undefined method Latte\\Compiler\\TemplateGenerator\:\:buildClass\(\)\.$#'
                 - '#^Call to an undefined method Latte\\Compiler\\TemplateGenerator\:\:generateCode\(\)\.$#'
                 - '#^Call to an undefined method Latte\\Compiler\\TemplateGenerator\:\:generate\(\)\.$#'
