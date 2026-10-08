@@ -112,11 +112,18 @@ final class TypeHelper
                         return null;
                     }
 
-                    $typeNames = match ($node->name) {
-                        'array', 'iterable', 'Traversable', 'Iterator' => ['mixed', 'mixed'],
-                        'Generator' => ['mixed', 'mixed', 'mixed', 'mixed'],
-                        default => null,
-                    };
+                    $typeNames = null;
+                    switch ($node->name) {
+                        case 'array':
+                        case 'iterable':
+                        case 'Traversable':
+                        case 'Iterator':
+                            $typeNames = ['mixed', 'mixed'];
+                            break;
+                        case 'Generator':
+                            $typeNames = ['mixed', 'mixed', 'mixed', 'mixed'];
+                            break;
+                    }
                     if ($typeNames === null) {
                         return null;
                     }
