@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\PresenterWithoutModule;
 
+use Efabrica\PHPStanLatte\Tests\DependencyVersion;
 use Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\LatteTemplatesRuleTest;
 use Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\PresenterWithoutModule\Fixtures\LinksPresenter;
 
@@ -109,7 +110,7 @@ class LatteTemplatesRuleForPresenterWithNoMappingTest extends LatteTemplatesRule
                 '@layout.latte',
             ],
         ];
-        if (!$this->usesSeparatedPhpStanCommand()) {
+        if (DependencyVersion::phpstanAtLeast23() && !$this->usesSeparatedPhpStanCommand()) {
             // PHPStan 2.3 dead-code and repeated-assignment checks on generated template code;
             // the separated phpstan command does not report them.
             $expectedErrors[] = [
