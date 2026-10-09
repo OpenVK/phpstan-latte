@@ -201,6 +201,13 @@ parameters:
                 - src/Compiler/NodeVisitor/ChangeFiltersNodeVisitor.php
                 - src/Compiler/NodeVisitor/ChangeFunctionsNodeVisitor.php
             reportUnmatched: false
+        # The guard is needed on PHPStan 2.1 / Latte < 3.1 where $filter[1] infers as mixed
+        -
+            message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+            paths:
+                - src/Compiler/NodeVisitor/ChangeFiltersNodeVisitor.php
+                - src/Compiler/NodeVisitor/ChangeFunctionsNodeVisitor.php
+            reportUnmatched: false
         -
             # present only in nette/utils 4
             message: '#^PHPDoc tag @var with type SplFileInfo is not subtype of native type Nette\\Utils\\FileInfo\.$#'

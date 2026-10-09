@@ -240,7 +240,7 @@ final class ChangeFunctionsNodeVisitor extends NodeVisitorAbstract implements Fu
             $className = is_string($function[0]) ? $function[0] : get_class($function[0]);
             $methodName = $function[1];
 
-            if ($methodName === '') {
+            if (!is_string($methodName) || $methodName === '') {
                 continue;
             }
 
