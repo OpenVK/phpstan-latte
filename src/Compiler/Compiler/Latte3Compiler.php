@@ -93,6 +93,7 @@ final class Latte3Compiler extends AbstractCompiler
         if (LatteVersion::isLatte31()) {
             // Latte 3.1+ (TemplateGenerator::generate() was split into buildClass() + generateCode())
             $templateGenerator->buildClass($templateNode);
+            /** @var string $phpContent */
             $phpContent = $templateGenerator->generateCode($className, null, $this->strictMode);
             $phpContent = str_replace(
                 "final class {$className} extends",
