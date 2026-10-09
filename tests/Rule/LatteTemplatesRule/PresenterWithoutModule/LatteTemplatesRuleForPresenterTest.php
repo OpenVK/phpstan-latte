@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\PresenterWithoutModule;
 
 use Efabrica\PHPStanLatte\Compiler\LatteVersion;
+use Efabrica\PHPStanLatte\Tests\DependencyVersion;
 use Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\LatteTemplatesRuleTest;
 use Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\PresenterWithoutModule\Fixtures\LinksPresenter;
 use Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\PresenterWithoutModule\Fixtures\VariablesPresenter;
@@ -26,7 +27,13 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
 
     public function testVariables(): void
     {
-        $this->analyse([__DIR__ . '/Fixtures/VariablesPresenter.php'], [
+        // Latte 3.1 declares a native return type on Filters::slice, which PHPStan cannot
+        // narrow with the stub's conditional return type anymore.
+        $sliceArrayType = LatteVersion::isLatte31()
+            ? "Dumped type: array<'bar'|'baz'|'foo'>|Generator"
+            : "Dumped type: array<'bar'|'baz'|'foo'>";
+        $sliceStringType = LatteVersion::isLatte31() ? 'Dumped type: Generator|string' : 'Dumped type: string';
+        $expectedErrors = [
             [
                 'Undefined variable: $items',
                 5,
@@ -163,12 +170,12 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 'default.latte',
             ],
             [
-                "Dumped type: array<'bar'|'baz'|'foo'>", // False positive - TODO create DynamicMethodReturnTypeExtension for Latte\Runtime\Filters::slice - inspire in ArraySliceFunctionReturnTypeExtension and SubstrDynamicReturnTypeExtension
+                $sliceArrayType, // False positive - TODO create DynamicMethodReturnTypeExtension for Latte\Runtime\Filters::slice - inspire in ArraySliceFunctionReturnTypeExtension and SubstrDynamicReturnTypeExtension
                 92,
                 'default.latte',
             ],
             [
-                'Dumped type: string',
+                $sliceStringType,
                 94,
                 'default.latte',
             ],
@@ -532,12 +539,167 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 7,
                 '@layoutOther.latte',
             ],
-        ]);
+        ];
+        if (DependencyVersion::phpstanAtLeast23()) {
+            // PHPStan 2.3 dead-code and implicit-array checks on generated template code
+            if (!LatteVersion::isLatte2()) {
+                $expectedErrors[] = [
+                    'Value assigned to variable $someOtherVariableWithDefault is never read.',
+                    2,
+                    'default.latte',
+                ];
+            }
+            $expectedErrors[] = [
+                'Value assigned to variable $iterator is never read before being overwritten.',
+                5,
+                'default.latte',
+            ];
+            if (LatteVersion::isLatte31()) {
+                $expectedErrors[] = [
+                    'Implicit array creation is not allowed - variable $ʟ_tags might not exist.',
+                    6,
+                    'default.latte',
+                ];
+            }
+            $expectedErrors[] = [
+                'Value assigned to variable $iterator is never read before being overwritten.',
+                7,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Coalesce operator ?? is unnecessary because the left side is always set and the right side is null.',
+                26,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Coalesce operator ?? is unnecessary because the left side is always set and the right side is null.',
+                32,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $iterator is never read before being overwritten.',
+                42,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Coalesce operator ?? is unnecessary because the left side is always set and the right side is null.',
+                50,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $iterator is never read.',
+                58,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $ʟ_it is never read.',
+                58,
+                'default.latte',
+            ];
+            if (LatteVersion::isLatte31()) {
+                $expectedErrors[] = [
+                    'Implicit array creation is not allowed - variable $ʟ_tags might not exist.',
+                    100,
+                    'default.latte',
+                ];
+            }
+            if (!LatteVersion::isLatte2()) {
+                $expectedErrors[] = [
+                    'Value assigned to variable $headerVar is never read.',
+                    3,
+                    'other.latte',
+                ];
+            }
+            $expectedErrors[] = [
+                'Value assigned to variable $ʟ_switch is never read before being overwritten.',
+                20,
+                'specialConstructs.latte',
+            ];
+            if (LatteVersion::isLatte2()) {
+                // Latte 2 compiled foreach code triggers additional PHPStan 2.3 dead-code checks
+                $expectedErrors[] = [
+                    'Value assigned to variable $iterations only flows into values that are never used.',
+                    4,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $iterator is never read before being overwritten.',
+                    6,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value of variable $iterations after ++ only flows into values that are never used.',
+                    6,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $iterations only flows into values that are never used.',
+                    21,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $iterations is never read before being overwritten.',
+                    23,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value of variable $iterations after ++ only flows into values that are never used.',
+                    23,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value of variable $iterations after ++ is never read before being overwritten.',
+                    42,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $iterations only flows into values that are never used.',
+                    45,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $iterations only flows into values that are never used.',
+                    47,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value of variable $iterations after ++ only flows into values that are never used.',
+                    47,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value of variable $iterations after ++ only flows into values that are never used.',
+                    58,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $iterations only flows into values that are never used.',
+                    1,
+                    'specialConstructs.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $iterations only flows into values that are never used.',
+                    20,
+                    'specialConstructs.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value of variable $iterations after ++ only flows into values that are never used.',
+                    20,
+                    'specialConstructs.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value of variable $iterations after ++ only flows into values that are never used.',
+                    27,
+                    'specialConstructs.latte',
+                ];
+            }
+        }
+        $this->analyse([__DIR__ . '/Fixtures/VariablesPresenter.php'], $expectedErrors);
     }
 
     public function testComponents(): void
     {
-        $this->analyse([__DIR__ . '/Fixtures/ComponentsPresenter.php'], [
+        $expectedErrors = [
             [
                 'Component with name "onlyCreateForm" probably doesn\'t exist.',
                 9,
@@ -664,11 +826,924 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 10,
                 '@layout.latte',
             ],
-        ]);
+        ];
+        if (DependencyVersion::phpstanAtLeast23() && LatteVersion::isLatte2()) {
+            // Latte 2 compiled foreach code triggers additional PHPStan 2.3 dead-code checks
+            $expectedErrors[] = [
+                'Value assigned to variable $iterations only flows into values that are never used.',
+                29,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value of variable $iterations after ++ only flows into values that are never used.',
+                31,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $iterations only flows into values that are never used.',
+                36,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value of variable $iterations after ++ only flows into values that are never used.',
+                38,
+                'default.latte',
+            ];
+        }
+        $this->analyse([__DIR__ . '/Fixtures/ComponentsPresenter.php'], $expectedErrors);
     }
 
     public function testForms(): void
     {
+        if (LatteVersion::isLatte31() && DependencyVersion::netteFormsAtLeast33()) {
+            // Latte 3.1 + nette/forms 3.3 + PHPStan 2.3 output. The expectations below
+            // are kept for Latte 2/3.0 runs.
+            $this->analyse([__DIR__ . '/Fixtures/FormsPresenter.php'], [
+            [
+                'Undefined variable: $title',
+                7,
+                '@layout.latte',
+            ],
+            [
+                'Undefined variable: $title',
+                7,
+                '@layout.latte',
+            ],
+            [
+                'Undefined variable: $neverDefined',
+                10,
+                '@layout.latte',
+            ],
+            [
+                'Undefined variable: $neverDefined',
+                10,
+                '@layout.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read before being overwritten.',
+                1,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_elem is never read before being overwritten.',
+                2,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read before being overwritten.',
+                8,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                101,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                102,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                105,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                106,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                109,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                10,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                110,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read before being overwritten.',
+                114,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                116,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                117,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                119,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                11,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                11,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                11,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                120,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $control of method Nette\\Forms\\Rendering\\DefaultFormRenderer::renderPair() expects Nette\\Forms\\Control, Nette\\ComponentModel\\IComponent given.',
+                127,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $control of method Nette\\Forms\\Rendering\\DefaultFormRenderer::renderPair() expects Nette\\Forms\\Control, Nette\\ComponentModel\\IComponent given.',
+                128,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $control of method Efabrica\\PHPStanLatte\\Tests\\Rule\\LatteTemplatesRule\\PresenterWithoutModule\\Source\\CustomFormRenderer::someCustomMethod() expects Nette\\Forms\\Control, Nette\\ComponentModel\\IComponent given.',
+                129,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_elem is never read before being overwritten.',
+                12,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_elem is never read.',
+                12,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                12,
+                'default.latte',
+            ],
+            [
+                'Call to an undefined method Efabrica\\PHPStanLatte\\Tests\\Rule\\LatteTemplatesRule\\PresenterWithoutModule\\Source\\CustomFormRenderer::someNonExistingCustomMethod().',
+                130,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                134,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                134,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                134,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                135,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                135,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                135,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                136,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                136,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                136,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                137,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                137,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                137,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                138,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                138,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                138,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                139,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                139,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                139,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                13,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                140,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                140,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                140,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                141,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                141,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read.',
+                141,
+                'default.latte',
+            ],
+            [
+                'Dumped type: Nette\\ComponentModel\\IComponent',
+                142,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $item of method Nette\\Bridges\\FormsLatte\\Runtime::get() expects int|Nette\\Forms\\Container|Nette\\Forms\\Control|string, mixed given.',
+                143,
+                'default.latte',
+            ],
+            [
+                'Dumped type: Nette\\ComponentModel\\IComponent',
+                144,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $item of method Nette\\Bridges\\FormsLatte\\Runtime::get() expects int|Nette\\Forms\\Container|Nette\\Forms\\Control|string, mixed given.',
+                145,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $item of method Nette\\Bridges\\FormsLatte\\Runtime::get() expects int|Nette\\Forms\\Container|Nette\\Forms\\Control|string, mixed given.',
+                146,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                146,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                148,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read.',
+                153,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                154,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                156,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                159,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                15,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                161,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                164,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                166,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                169,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read.',
+                171,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Rendering\\DefaultFormRenderer::renderControls() invoked with 2 parameters, 1 required.',
+                19,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $parent of method Nette\\Forms\\Rendering\\DefaultFormRenderer::renderControls() expects Nette\\Forms\\Container|Nette\\Forms\\ControlGroup, Nette\\Forms\\ControlGroup|null given.',
+                19,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $parent of method Nette\\Forms\\Rendering\\DefaultFormRenderer::renderControls() expects Nette\\Forms\\Container|Nette\\Forms\\ControlGroup, Nette\\Forms\\ControlGroup|null given.',
+                20,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $control of method Nette\\Forms\\Rendering\\DefaultFormRenderer::renderPair() expects Nette\\Forms\\Control, Nette\\ComponentModel\\IComponent given.',
+                21,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $control of method Nette\\Forms\\Rendering\\DefaultFormRenderer::renderPair() expects Nette\\Forms\\Control, Nette\\ComponentModel\\IComponent given.',
+                22,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $control of method Efabrica\\PHPStanLatte\\Tests\\Rule\\LatteTemplatesRule\\PresenterWithoutModule\\Source\\CustomFormRenderer::someCustomMethod() expects Nette\\Forms\\Control, Nette\\ComponentModel\\IComponent given.',
+                23,
+                'default.latte',
+            ],
+            [
+                'Call to an undefined method Efabrica\\PHPStanLatte\\Tests\\Rule\\LatteTemplatesRule\\PresenterWithoutModule\\Source\\CustomFormRenderer::someNonExistingCustomMethod().',
+                24,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read before being overwritten.',
+                27,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read before being overwritten.',
+                34,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read before being overwritten.',
+                41,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $form of method Nette\\Bridges\\FormsLatte\\Runtime::begin() expects Nette\\Forms\\Container, mixed given.',
+                48,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read before being overwritten.',
+                48,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                49,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                54,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $item of method Nette\\Bridges\\FormsLatte\\Runtime::get() expects int|Nette\\Forms\\Container|Nette\\Forms\\Control|string, Nette\\ComponentModel\\IComponent given.',
+                56,
+                'default.latte',
+            ],
+            [
+                'Cannot access offset \'text1\' on Nette\\ComponentModel\\IComponent.',
+                60,
+                'default.latte',
+            ],
+            [
+                'Cannot call method getHtmlId() on mixed.',
+                60,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read before being overwritten.',
+                70,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                71,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                72,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                75,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                76,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                79,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                80,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                83,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                84,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                87,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                88,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                91,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                92,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $form is never read before being overwritten.',
+                96,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                97,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                98,
+                'default.latte',
+            ],
+            ]);
+            return;
+        }
+        if (LatteVersion::isLatte31()) {
+            // Latte 3.1 + nette/forms 3.2 output; nette/forms 3.2 still calls FormsLatte\Runtime::item()
+            $this->analyse([__DIR__ . '/Fixtures/FormsPresenter.php'], [
+            [
+                'Undefined variable: $title',
+                7,
+                '@layout.latte',
+            ],
+            [
+                'Undefined variable: $title',
+                7,
+                '@layout.latte',
+            ],
+            [
+                'Undefined variable: $neverDefined',
+                10,
+                '@layout.latte',
+            ],
+            [
+                'Undefined variable: $neverDefined',
+                10,
+                '@layout.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_elem is never read before being overwritten.',
+                2,
+                'default.latte',
+            ],
+            [
+                'Form control with name "password" probably does not exist.',
+                4,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                101,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                102,
+                'default.latte',
+            ],
+            [
+                'Form control with name "1" probably does not exist.',
+                105,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                106,
+                'default.latte',
+            ],
+            [
+                'Form control with name "1" probably does not exist.',
+                109,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                10,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                110,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                116,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                117,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                119,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getControlPart() invoked with 1 parameter, 0 required.',
+                11,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Controls\\BaseControl::getLabelPart() invoked with 1 parameter, 0 required.',
+                11,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                11,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                120,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_elem is never read before being overwritten.',
+                12,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_elem is never read.',
+                12,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                12,
+                'default.latte',
+            ],
+            [
+                'Call to an undefined method Efabrica\\PHPStanLatte\\Tests\\Rule\\LatteTemplatesRule\\PresenterWithoutModule\\Source\\CustomFormRenderer::someNonExistingCustomMethod().',
+                130,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                134,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                135,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                136,
+                'default.latte',
+            ],
+            [
+                'Option "item4" for control "checkbox_list" probably doesn\'t exist.',
+                137,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                137,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                138,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                139,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                13,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                140,
+                'default.latte',
+            ],
+            [
+                'Option "4" for control "radio_list" probably doesn\'t exist.',
+                141,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $ʟ_label is never read.',
+                141,
+                'default.latte',
+            ],
+            [
+                'Dumped type: Nette\\Forms\\Controls\\TextInput',
+                142,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $item of static method Nette\\Bridges\\FormsLatte\\Runtime::item() expects int|object|string, mixed given.',
+                142,
+                'default.latte',
+            ],
+            [
+                'Unable to resolve the template type T in call to static method Nette\\Bridges\\FormsLatte\\Runtime::item()',
+                142,
+                'default.latte',
+                'See: https://phpstan.org/blog/solving-phpstan-error-unable-to-resolve-template-type',
+            ],
+            [
+                'Dumped type: Nette\\Forms\\Controls\\TextInput',
+                144,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                146,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                148,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                154,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                156,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                159,
+                'default.latte',
+            ],
+            [
+                'Form control with name "second_submit" probably does not exist.',
+                15,
+                'default.latte',
+            ],
+            [
+                'Form control with name "second_submit_label" probably does not exist.',
+                15,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                161,
+                'default.latte',
+            ],
+            [
+                'Form control with name "2" probably does not exist.',
+                164,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                166,
+                'default.latte',
+            ],
+            [
+                'Form control with name "10" probably does not exist.',
+                169,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read.',
+                171,
+                'default.latte',
+            ],
+            [
+                'Method Nette\\Forms\\Rendering\\DefaultFormRenderer::renderControls() invoked with 2 parameters, 1 required.',
+                19,
+                'default.latte',
+            ],
+            [
+                'Parameter #1 $parent of method Nette\\Forms\\Rendering\\DefaultFormRenderer::renderControls() expects Nette\\Forms\\Container|Nette\\Forms\\ControlGroup, null given.',
+                20,
+                'default.latte',
+            ],
+            [
+                'Call to an undefined method Efabrica\\PHPStanLatte\\Tests\\Rule\\LatteTemplatesRule\\PresenterWithoutModule\\Source\\CustomFormRenderer::someNonExistingCustomMethod().',
+                24,
+                'default.latte',
+            ],
+            [
+                'Form with name "notExisting" probably does not exist.',
+                48,
+                'default.latte',
+            ],
+            [
+                'Form control with name "username" probably does not exist.',
+                49,
+                'default.latte',
+            ],
+            [
+                'PHPDoc tag @var with type Nette\\Forms\\Controls\\BaseControl is not subtype of type Nette\\Forms\\Controls\\TextArea.',
+                55,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                71,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                72,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                75,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                76,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                79,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                80,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                83,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                84,
+                'default.latte',
+            ],
+            [
+                'Form control with name "5" probably does not exist.',
+                87,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                88,
+                'default.latte',
+            ],
+            [
+                'Form control with name "5" probably does not exist.',
+                91,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                92,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                97,
+                'default.latte',
+            ],
+            [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                98,
+                'default.latte',
+            ],
+            ]);
+            return;
+        }
         $expectedErrors = [
             [
                 'Form control with name "password" probably does not exist.',
@@ -803,6 +1878,226 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 'default.latte',
             ];
         }
+        if (DependencyVersion::phpstanAtLeast23()) {
+            // PHPStan 2.3 dead-code checks on nette/forms 3.1 generated template code
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                71,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                72,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                75,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                76,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                79,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                80,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                83,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                84,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                88,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                92,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                97,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                98,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                101,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                102,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                106,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                110,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                116,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                117,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                119,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                120,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                146,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                148,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                154,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                156,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                159,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                161,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $formContainer is never read before being overwritten.',
+                166,
+                'default.latte',
+            ];
+            if (LatteVersion::isLatte3()) {
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_elem is never read before being overwritten.',
+                    2,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    10,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    11,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_elem is never read before being overwritten.',
+                    12,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_elem is never read.',
+                    12,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    12,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    13,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    134,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    135,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    136,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    137,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    138,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    139,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read before being overwritten.',
+                    140,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $ʟ_label is never read.',
+                    141,
+                    'default.latte',
+                ];
+                $expectedErrors[] = [
+                    'Value assigned to variable $formContainer is never read.',
+                    171,
+                    'default.latte',
+                ];
+            }
+        }
         $this->analyse([__DIR__ . '/Fixtures/FormsPresenter.php'], $expectedErrors);
     }
 
@@ -911,11 +2206,6 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 10,
                 '@layout.latte',
             ],
-            [
-                'Cannot convert array<mixed>|string to HTML string.',
-                22,
-                'default.latte',
-            ],
         ];
 
         if (LatteVersion::isLatte3()) {
@@ -924,19 +2214,40 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 2,
                 'translate_new.latte',
             ];
+            if (LatteVersion::isLatte31()) {
+                // Latte 3.1 declares native types on built-in filters. PHPStan stub PHPDoc
+                // can only narrow native types, so the permissive FilterString stub no longer
+                // widens |lower/|upper/|capitalize, and the native |slice return type
+                // (including Generator) leaks into the escape checks.
+                $filterStringType = 'string|Stringable|null';
+                $sliceReturnType = 'array<mixed>|Generator|string';
+                $expectedErrors[] = [
+                    'Parameter #3 $s of static method Latte\Runtime\Helpers::convertTo() expects string, mixed given.',
+                    22,
+                    'default.latte',
+                ];
+            } else {
+                $filterStringType = 'bool|float|int|string|Stringable|null';
+                $sliceReturnType = 'array<mixed>|string';
+            }
             $expectedErrors[] = [
-                'Parameter #1 $s of static method Latte\Essential\Filters::lower() expects bool|float|int|string|Stringable|null, stdClass given.',
+                'Parameter #1 $s of static method Latte\Essential\Filters::lower() expects ' . $filterStringType . ', stdClass given.',
                 19,
                 'default.latte',
             ];
             $expectedErrors[] = [
-                'Parameter #1 $s of static method Latte\Essential\Filters::upper() expects bool|float|int|string|Stringable|null, stdClass given.',
+                'Parameter #1 $s of static method Latte\Essential\Filters::upper() expects ' . $filterStringType . ', stdClass given.',
                 20,
                 'default.latte',
             ];
             $expectedErrors[] = [
-                'Parameter #1 $s of static method Latte\Essential\Filters::capitalize() expects bool|float|int|string|Stringable|null, stdClass given.',
+                'Parameter #1 $s of static method Latte\Essential\Filters::capitalize() expects ' . $filterStringType . ', stdClass given.',
                 21,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Cannot convert ' . $sliceReturnType . ' to HTML string.',
+                22,
                 'default.latte',
             ];
             $expectedErrors[] = [
@@ -976,6 +2287,11 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
             $expectedErrors[] = [
                 'Parameter #1 $s of static method Latte\Runtime\Filters::capitalize() expects ' . $filterStringType . ', stdClass given.',
                 21,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Cannot convert array<mixed>|string to HTML string.',
+                22,
                 'default.latte',
             ];
             $expectedErrors[] = [
@@ -1185,6 +2501,24 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 '@layout.latte',
             ],
         ];
+        if (DependencyVersion::phpstanAtLeast23()) {
+            // PHPStan 2.3 dead-code and repeated-assignment checks on generated template code
+            $expectedErrors[] = [
+                'Variable $ʟ_tmp is assigned value array{aa: 1, bb: 1} but it already has that value.',
+                7,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Variable $ʟ_tmp is assigned value array{aa: 1, bb: 1} but it already has that value.',
+                101,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value assigned to variable $ʟ_fi is never read.',
+                102,
+                'default.latte',
+            ];
+        }
         $this->analyse([__DIR__ . '/Fixtures/LinksPresenter.php'], $expectedErrors);
     }
 
@@ -1742,6 +3076,19 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 'Combination of n:snippet with n:foreach is invalid, use n:inner-foreach (on line 3)',
                 3,
                 'compileError.latte',
+            ];
+        }
+        if (DependencyVersion::phpstanAtLeast23() && LatteVersion::isLatte2()) {
+            // Latte 2 compiled foreach code triggers additional PHPStan 2.3 dead-code checks
+            $expectedErrors[] = [
+                'Value assigned to variable $iterations only flows into values that are never used.',
+                3,
+                'default.latte',
+            ];
+            $expectedErrors[] = [
+                'Value of variable $iterations after ++ only flows into values that are never used.',
+                5,
+                'default.latte',
             ];
         }
         $this->analyse([__DIR__ . '/Fixtures/SnippetsPresenter.php'], $expectedErrors);

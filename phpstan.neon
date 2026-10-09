@@ -74,10 +74,6 @@ parameters:
             path: src/Compiler/Compiler/AbstractCompiler.php
 
         -
-            message: '#^Call to function is_array\(\) with array{0: string, 1: string, 2\?: string} will always evaluate to true\.$#'
-            path: src/LinkProcessor/FakePresenterFactory.php
-
-        -
             messages:
                 - '#^Call to internal method Nette\\Application\\PresenterFactory::formatPresenterClass\(\) from outside its root namespace Nette\.$#'
                 - '#^Call to internal method Nette\\Application\\PresenterFactory::unformatPresenterClass\(\) from outside its root namespace Nette\.$#'
@@ -158,6 +154,11 @@ parameters:
                 - '#^Call to an undefined method Latte\\Engine\:\:applyPasses\(\)\.$#'
                 - '#^Instantiated class Latte\\Compiler\\TemplateGenerator not found\.$#'
                 - '#^Call to method generate\(\) on an unknown class Latte\\Compiler\\TemplateGenerator\.$#'
+                - '#^Call to method buildClass\(\) on an unknown class Latte\\Compiler\\TemplateGenerator\.$#'
+                - '#^Call to method generateCode\(\) on an unknown class Latte\\Compiler\\TemplateGenerator\.$#'
+                - '#^Call to an undefined method Latte\\Compiler\\TemplateGenerator\:\:buildClass\(\)\.$#'
+                - '#^Call to an undefined method Latte\\Compiler\\TemplateGenerator\:\:generateCode\(\)\.$#'
+                - '#^Call to an undefined method Latte\\Compiler\\TemplateGenerator\:\:generate\(\)\.$#'
                 - '#^Call to an undefined method Latte\\Engine\:\:getExtensions\(\)\.$#'
                 - '#^Call to an undefined method Latte\\Engine\:\:getFunctions\(\)\.$#'
                 - '#^Parameter \$extensions of method Efabrica\\PHPStanLatte\\Compiler\\Compiler\\Latte3Compiler\:\:installExtensions\(\) has invalid type Latte\\Extension\.$#'
@@ -165,7 +166,7 @@ parameters:
                 - '#^Parameter \#1 \$phpContent of method Efabrica\\PHPStanLatte\\Compiler\\Compiler\\Latte3Compiler::fixLines\(\) expects string, mixed given\.#'
                 - '#^PHPDoc tag @var with type array<string, callable> is not subtype of type array<string>\.#'
                 - '#^Parameter \#1 \$object of function get_class expects object, mixed given\.#'
-                - '#^Call to function is_array\(\) with array<Latte\\Extension> will always evaluate to true\.#'
+                - '#^Call to function is_array\(\) with (array|list)<Latte\\Extension> will always evaluate to true\.#'
                 - '#^Call to function is_object\(\) with Latte\\Extension will always evaluate to true\.#'
             path: src/Compiler/Compiler/Latte3Compiler.php
             reportUnmatched: false
@@ -199,6 +200,14 @@ parameters:
             paths:
                 - src/Compiler/NodeVisitor/ChangeFiltersNodeVisitor.php
                 - src/Compiler/NodeVisitor/ChangeFunctionsNodeVisitor.php
+            reportUnmatched: false
+        # The guard is needed on PHPStan 2.1 / Latte < 3.1 where $filter[1] infers as mixed
+        -
+            message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+            paths:
+                - src/Compiler/NodeVisitor/ChangeFiltersNodeVisitor.php
+                - src/Compiler/NodeVisitor/ChangeFunctionsNodeVisitor.php
+            reportUnmatched: false
         -
             # present only in nette/utils 4
             message: '#^PHPDoc tag @var with type SplFileInfo is not subtype of native type Nette\\Utils\\FileInfo\.$#'

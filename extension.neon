@@ -5,6 +5,7 @@ parameters:
         - stubs/Latte/Essential/Filters.stub
         - stubs/Latte/Runtime/FilterInfo.stub
         - stubs/Latte/Runtime/Filters.stub
+        - stubs/Latte/Runtime/HtmlHelpers.stub
         - stubs/Latte/Runtime/Helpers.stub
         - stubs/Latte/Runtime/HtmlStringable.stub
         - stubs/Latte/Runtime/Html.stub
@@ -31,7 +32,11 @@ parameters:
         extensions: []
         resolveAllPossiblePaths: false
         reportUnanalysedTemplates: false
+        maxTemplateVariants: 0
+        breakIncludeCycles: false
+        resolveTypes: true
         collectedPaths: []
+        templateTypes: []
         features:
             transformDynamicFormControlNamesToString: false
             phpstanCommand: null
@@ -62,7 +67,11 @@ parametersSchema:
         extensions: arrayOf(object())
         resolveAllPossiblePaths: bool()
         reportUnanalysedTemplates: bool()
+        maxTemplateVariants: int()
+        breakIncludeCycles: bool()
+        resolveTypes: bool()
         collectedPaths: arrayOf(string())
+        templateTypes: arrayOf(string())
         features: structure([
             transformDynamicFormControlNamesToString: bool()
             phpstanCommand: schema(string(), nullable())
@@ -118,6 +127,7 @@ services:
         factory: Efabrica\PHPStanLatte\Compiler\Postprocessor
         arguments:
             parser: @latteCurrentPhpVersionRichParser
+            resolveTypes: %latte.resolveTypes%
 
     - Efabrica\PHPStanLatte\Compiler\TypeToPhpDoc
     - Efabrica\PHPStanLatte\Compiler\Helper\TemplateContextHelper
@@ -135,7 +145,7 @@ services:
 
     # Type resolvers
     - Efabrica\PHPStanLatte\Resolver\TypeResolver\TypeResolver
-    - Efabrica\PHPStanLatte\Resolver\TypeResolver\TemplateTypeResolver
+    - Efabrica\PHPStanLatte\Resolver\TypeResolver\TemplateTypeResolver(%latte.templateTypes%)
 
     # Value resolvers
     - Efabrica\PHPStanLatte\Resolver\ValueResolver\ValueResolver()
