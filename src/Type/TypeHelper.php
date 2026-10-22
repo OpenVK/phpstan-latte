@@ -108,6 +108,14 @@ final class TypeHelper
             new class extends AbstractNodeVisitor {
                 public function enterNode(Node $node): ?Node
                 {
+                    // The base of an already generic type (e.g. "array" in "array<string>") is
+                    // not bare and lives in GenericTypeNode::$type, which is natively typed as
+                    // IdentifierTypeNode - it cannot be replaced by a GenericTypeNode.
+                    if ($node instanceof GenericTypeNode) {
+                        $node->type->setAttribute('latteTypeExpanded', true);
+                        return null;
+                    }
+
                     if (!$node instanceof IdentifierTypeNode || $node->getAttribute('latteTypeExpanded')) {
                         return null;
                     }

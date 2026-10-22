@@ -164,7 +164,12 @@ final class ChangeFunctionsNodeVisitor extends NodeVisitorAbstract implements Fu
             return null;
         }
 
-        return [$scopeClass->getName(), $methodName];
+        // An instance method callable keeps the object it was created on: use its class
+        // so the most derived implementation is analysed, as with array callables.
+        $closureThis = $reflection->getClosureThis();
+        $className = $closureThis !== null ? get_class($closureThis) : $scopeClass->getName();
+
+        return [$className, $methodName];
     }
 
     private function addFunctionVariables(ClassMethod $node): void
