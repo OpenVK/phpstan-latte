@@ -155,7 +155,12 @@ final class ChangeFiltersNodeVisitor extends NodeVisitorAbstract implements Filt
             return null;
         }
 
-        return [$scopeClass->getName(), $methodName];
+        // An instance method callable keeps the object it was created on: use its class
+        // so the most derived implementation is analysed, as with array callables.
+        $closureThis = $reflection->getClosureThis();
+        $className = $closureThis !== null ? get_class($closureThis) : $scopeClass->getName();
+
+        return [$className, $methodName];
     }
 
     private function addFilterVariables(ClassMethod $node): void
