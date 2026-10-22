@@ -110,7 +110,7 @@ final class LatteToPhpCompiler
         $compileFilePath = $compileDir . DIRECTORY_SEPARATOR . $fileName;
 
         if (!$this->debugMode && file_exists($compileFilePath)) {
-            require($compileFilePath); // load type definitions from compiled template
+            require_once($compileFilePath); // load type definitions from compiled template
             return realpath($compileFilePath) ?: '';
         }
 

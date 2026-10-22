@@ -6,8 +6,6 @@ namespace Efabrica\PHPStanLatte\LinkProcessor;
 
 use Nette\Application\PresenterFactory;
 use Nette\InvalidStateException;
-use function count;
-use function is_array;
 use function is_string;
 use function preg_match;
 use function preg_replace;
@@ -19,7 +17,7 @@ final class FakePresenterFactory extends PresenterFactory
     private array $mapping = [];
 
     /**
-     * @param array<string, string|array{string, string}|array{string, string, string}> $mapping
+     * @param array<string, string|array{string, string, string}> $mapping
      */
     public function setFakeMapping(array $mapping): FakePresenterFactory
     {
@@ -31,10 +29,8 @@ final class FakePresenterFactory extends PresenterFactory
                 }
 
                 $this->mapping[$module] = [$m[1], $m[2] ?: '*Module\\', $m[3]];
-            } elseif (is_array($mask) && count($mask) === 3) {
-                $this->mapping[$module] = [$mask[0] ? $mask[0] . '\\' : '', $mask[1] . '\\', $mask[2]];
             } else {
-                throw new InvalidStateException("Invalid mapping mask for module $module.");
+                $this->mapping[$module] = [$mask[0] ? $mask[0] . '\\' : '', $mask[1] . '\\', $mask[2]];
             }
         }
 

@@ -1,0 +1,21 @@
+<?php
+
+namespace Latte\Runtime;
+
+use Latte\Runtime\HtmlStringable as LatteHtmlStringable;
+use Nette\HtmlStringable as NetteHtmlStringable;
+use Stringable;
+
+/**
+ * Latte 3.1 moved HTML escaping from Latte\Runtime\Filters to HtmlHelpers.
+ * @phpstan-type FilterString string|int|float|bool|null|Stringable|NetteHtmlStringable|LatteHtmlStringable
+ */
+final class HtmlHelpers
+{
+    /**
+     * @param FilterString $s
+     */
+    public static function escapeText(mixed $s): string
+    {
+    }
+}

@@ -57,6 +57,8 @@ final class Postprocessor
 
     private NameResolver $nameResolver;
 
+    private bool $resolveTypes;
+
     public function __construct(
         Parser $parser,
         NodeVisitorStorage $nodeVisitorStorage,
@@ -64,7 +66,8 @@ final class Postprocessor
         CompilerInterface $compiler,
         ScopeFactory $scopeFactory,
         NodeScopeResolver $nodeScopeResolver,
-        NameResolver $nameResolver
+        NameResolver $nameResolver,
+        bool $resolveTypes = true
     ) {
         $this->parser = $parser;
         $this->nodeVisitorStorage = $nodeVisitorStorage;
@@ -73,6 +76,7 @@ final class Postprocessor
         $this->scopeFactory = $scopeFactory;
         $this->nodeScopeResolver = $nodeScopeResolver;
         $this->nameResolver = $nameResolver;
+        $this->resolveTypes = $resolveTypes;
     }
 
     public function getCacheKey(): string
@@ -102,7 +106,14 @@ final class Postprocessor
         if ($realPath === '') {
             return '';
         }
-        require($compileFilePath); // load type definitions from compiled template
+        require_once($compileFilePath); // load type definitions from compiled template
+
+        // Type resolution pass: making it optional trades analysis precision
+        // inside templates (ExprTypeNodeVisitors) for a significant amount of
+        // retained memory on projects with many template variants.
+        if (!$this->resolveTypes) {
+            return $realPath;
+        }
 
         $scope = $this->scopeFactory->create(ScopeContext::create($realPath));
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Efabrica\PHPStanLatte\Compiler\Compiler;
 
+use Efabrica\PHPStanLatte\Compiler\LatteVersion;
 use Latte\Compiler\TemplateGenerator;
 use Latte\Engine;
 use Latte\Essential\RawPhpExtension;
@@ -20,6 +21,7 @@ use function is_array;
 use function is_object;
 use function md5;
 use function preg_replace;
+use function str_replace;
 
 final class Latte3Compiler extends AbstractCompiler
 {
@@ -88,12 +90,24 @@ final class Latte3Compiler extends AbstractCompiler
         $this->engine->applyPasses($templateNode);
         $className = $this->generateClassName();
         $templateGenerator = new TemplateGenerator();
-        $phpContent = $templateGenerator->generate(
-            $templateNode,
-            $className,
-            $this->generateClassComment($className, $context),
-            $this->strictMode
-        );
+        if (LatteVersion::isLatte31()) {
+            // Latte 3.1+ (TemplateGenerator::generate() was split into buildClass() + generateCode())
+            $templateGenerator->buildClass($templateNode);
+            /** @var string $phpContent */
+            $phpContent = $templateGenerator->generateCode($className, null, $this->strictMode);
+            $phpContent = str_replace(
+                "final class {$className} extends",
+                '/** source: ' . $this->generateClassComment($className, $context) . " */\nfinal class {$className} extends",
+                $phpContent
+            );
+        } else {
+            $phpContent = $templateGenerator->generate(
+                $templateNode,
+                $className,
+                $this->generateClassComment($className, $context),
+                $this->strictMode
+            );
+        }
         $phpContent = $this->fixLines($phpContent);
         $phpContent = $this->addTypes($phpContent, $className, $actualClass);
         return $phpContent;
@@ -111,6 +125,9 @@ final class Latte3Compiler extends AbstractCompiler
 
     private function fixLines(string $phpContent): string
     {
+        // Latte 3.1+ emits "/* pos <line>[:<column>] */" instead of "/* line <line> */"
+        $phpContent = preg_replace('/\/\* pos (\d+)(?::\d+)? \*\//', '/* line $1 */', $phpContent) ?: '';
+
         // fix lines after $component->render()
         $pattern = '/\$ʟ_tmp = \$this->global->uiControl->getComponent(.*?)\$ʟ_tmp->render\((.*?)\) (?<line>(.*?)\/\*(.*?)line (?<number>\d+)(.*?)\*\/);/s';
         $phpContent = preg_replace($pattern, '${3}' . "\n\t\t" . '$ʟ_tmp = $this->global->uiControl->getComponent${1}$ʟ_tmp->render(${2});', $phpContent) ?: '';

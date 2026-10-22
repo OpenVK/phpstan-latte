@@ -38,6 +38,7 @@ use function array_values;
 use function count;
 use function dirname;
 use function get_class;
+use function in_array;
 use function is_dir;
 use function is_file;
 use function is_string;
@@ -57,6 +58,9 @@ use const PATHINFO_BASENAME;
  */
 final class LatteTemplatesRule implements Rule
 {
+    /** @var array<string, int> number of analysed variants per template path in the current run */
+    private array $templateVariantCounts = [];
+
     /** @var LatteTemplateResolverInterface[] */
     private array $latteTemplateResolvers;
 
@@ -82,6 +86,10 @@ final class LatteTemplatesRule implements Rule
 
     private ?string $phpstanCommand;
 
+    private int $maxTemplateVariants;
+
+    private bool $breakIncludeCycles;
+
     /**
      * @param LatteTemplateResolverInterface[] $latteTemplateResolvers
      * @param TemplateRenderCollector[] $templateRenderCollectors
@@ -98,7 +106,9 @@ final class LatteTemplatesRule implements Rule
         array $templateRenderCollectors,
         TemplateContextHelper $templateContextHelper,
         TempDirResolver $tempDirResolver,
-        ?string $phpstanCommand
+        ?string $phpstanCommand,
+        int $maxTemplateVariants = 0,
+        bool $breakIncludeCycles = false
     ) {
         $this->latteTemplateResolvers = $latteTemplateResolvers;
         $this->latteToPhpCompiler = $latteToPhpCompiler;
@@ -112,6 +122,8 @@ final class LatteTemplatesRule implements Rule
         $this->templateContextHelper = $templateContextHelper;
         $this->tempDirResolver = $tempDirResolver;
         $this->phpstanCommand = $phpstanCommand;
+        $this->maxTemplateVariants = $maxTemplateVariants;
+        $this->breakIncludeCycles = $breakIncludeCycles;
     }
 
     public function getNodeType(): string
@@ -124,6 +136,8 @@ final class LatteTemplatesRule implements Rule
      */
     public function processNode(Node $collectedDataNode, Scope $scope): array
     {
+        $this->templateVariantCounts = [];
+
         $resolvedNodeFinder = new ResolvedNodeFinder($collectedDataNode, $this->latteTemplateResolvers);
 
         $analysedFiles = $resolvedNodeFinder->getAnalysedFiles();
@@ -172,6 +186,14 @@ final class LatteTemplatesRule implements Rule
         $compiledTemplates = [];
         foreach ($templates as $template) {
             $templatePath = $template->getPath();
+
+            if ($this->maxTemplateVariants > 0) {
+                $variants = $this->templateVariantCounts[$templatePath] ?? 0;
+                if ($variants >= $this->maxTemplateVariants) {
+                    continue;
+                }
+                $this->templateVariantCounts[$templatePath] = $variants + 1;
+            }
 
             if ($this->analysedTemplatesRegistry->isExcludedFromAnalysing($templatePath)) {
                 continue;
@@ -228,6 +250,9 @@ final class LatteTemplatesRule implements Rule
                         );
                     } else {
                         $includedTemplatePath = realpath($includedTemplatePath) ?: $includedTemplatePath;
+                        if ($this->breakIncludeCycles && ($includedTemplatePath === $template->getPath() || in_array($includedTemplatePath, $template->getParentTemplatePaths(), true))) {
+                            continue; // include cycle: contexts degrade and their number explodes
+                        }
                         $includeTemplate = new Template(
                             $includedTemplatePath,
                             $template->getActualClass(),
