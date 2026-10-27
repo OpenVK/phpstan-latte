@@ -29,7 +29,7 @@ class Helpers implements HtmlStringable
     }
 
     /**
-     * @param FilterString|array<mixed> $s
+     * json_encode() accepts any value, including arrays and objects.
      */
     public static function escapeJs(mixed $s): string
     {

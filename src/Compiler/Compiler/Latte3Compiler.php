@@ -9,6 +9,7 @@ use Latte\Compiler\TemplateGenerator;
 use Latte\Engine;
 use Latte\Essential\RawPhpExtension;
 use Latte\Extension;
+use Latte\Feature;
 use Nette\Bridges\ApplicationLatte\UIExtension;
 use Nette\Bridges\FormsLatte\FormsExtension;
 use PHPStan\ShouldNotHappenException;
@@ -93,7 +94,11 @@ final class Latte3Compiler extends AbstractCompiler
         $templateGenerator = new TemplateGenerator();
         if (LatteVersion::isLatte31()) {
             // Latte 3.1+ (TemplateGenerator::generate() was split into buildClass() + generateCode())
-            $templateGenerator->buildClass($templateNode);
+            $features = [];
+            foreach (Feature::cases() as $feature) {
+                $features[$feature->name] = $this->engine->hasFeature($feature);
+            }
+            $templateGenerator->buildClass($templateNode, $features);
             /** @var string $phpContent */
             $phpContent = $templateGenerator->generateCode($className, null, $this->strictMode);
         } else {

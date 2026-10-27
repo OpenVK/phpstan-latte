@@ -149,6 +149,20 @@ services:
     - Efabrica\PHPStanLatte\Resolver\TypeResolver\TypeResolver
     - Efabrica\PHPStanLatte\Resolver\TypeResolver\TemplateTypeResolver(%latte.templateTypes%)
 
+    -
+        class: Efabrica\PHPStanLatte\Type\SliceReturnTypeExtension
+        arguments:
+            className: Latte\Essential\Filters
+        tags:
+            - phpstan.broker.dynamicStaticMethodReturnTypeExtension
+
+    -
+        class: Efabrica\PHPStanLatte\Type\SliceReturnTypeExtension
+        arguments:
+            className: Latte\Runtime\Filters
+        tags:
+            - phpstan.broker.dynamicStaticMethodReturnTypeExtension
+
     # Value resolvers
     - Efabrica\PHPStanLatte\Resolver\ValueResolver\ValueResolver()
     - Efabrica\PHPStanLatte\Resolver\ValueResolver\PathResolver(%latte.resolveAllPossiblePaths%)

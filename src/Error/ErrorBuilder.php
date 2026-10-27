@@ -73,6 +73,7 @@ final class ErrorBuilder
         '/Cannot convert mixed to .*\./',
         '/Call to function array_key_exists\(\) with .* will always evaluate to (true|false)\./',
         '/Parameter #2 \$array of function implode expects array<string>, array<int, mixed> given\./', // n:class generates implode with mixed array
+        '/Call to function unset\(\) contains undefined variable .*/', // Latte 3.1 ScopedLoopVariables generated code
     ];
 
     /** @var string[] */

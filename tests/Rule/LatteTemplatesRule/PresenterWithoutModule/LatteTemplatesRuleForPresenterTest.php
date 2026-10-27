@@ -27,12 +27,10 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
 
     public function testVariables(): void
     {
-        // Latte 3.1 declares a native return type on Filters::slice, which PHPStan cannot
-        // narrow with the stub's conditional return type anymore.
-        $sliceArrayType = LatteVersion::isLatte31()
-            ? "Dumped type: array<'bar'|'baz'|'foo'>|Generator"
-            : "Dumped type: array<'bar'|'baz'|'foo'>";
-        $sliceStringType = LatteVersion::isLatte31() ? 'Dumped type: Generator|string' : 'Dumped type: string';
+        // slice() keeps string for strings and array for arrays; its native
+        // string|array|Generator return type is narrowed by SliceReturnTypeExtension.
+        $sliceArrayType = "Dumped type: array<'bar'|'baz'|'foo'>";
+        $sliceStringType = 'Dumped type: string';
         $expectedErrors = [
             [
                 'Undefined variable: $items',
@@ -170,7 +168,7 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 'default.latte',
             ],
             [
-                $sliceArrayType, // False positive - TODO create DynamicMethodReturnTypeExtension for Latte\Runtime\Filters::slice - inspire in ArraySliceFunctionReturnTypeExtension and SubstrDynamicReturnTypeExtension
+                $sliceArrayType, // Latte array_slice() preserves the item type
                 92,
                 'default.latte',
             ],
@@ -2217,10 +2215,8 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
             if (LatteVersion::isLatte31()) {
                 // Latte 3.1 declares native types on built-in filters. PHPStan stub PHPDoc
                 // can only narrow native types, so the permissive FilterString stub no longer
-                // widens |lower/|upper/|capitalize, and the native |slice return type
-                // (including Generator) leaks into the escape checks.
+                // widens |lower/|upper/|capitalize.
                 $filterStringType = 'string|Stringable|null';
-                $sliceReturnType = 'array<mixed>|Generator|string';
                 $expectedErrors[] = [
                     'Parameter #3 $s of static method Latte\Runtime\Helpers::convertTo() expects string, mixed given.',
                     22,
@@ -2228,7 +2224,6 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 ];
             } else {
                 $filterStringType = 'bool|float|int|string|Stringable|null';
-                $sliceReturnType = 'array<mixed>|string';
             }
             $expectedErrors[] = [
                 'Parameter #1 $s of static method Latte\Essential\Filters::lower() expects ' . $filterStringType . ', stdClass given.',
@@ -2243,11 +2238,6 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
             $expectedErrors[] = [
                 'Parameter #1 $s of static method Latte\Essential\Filters::capitalize() expects ' . $filterStringType . ', stdClass given.',
                 21,
-                'default.latte',
-            ];
-            $expectedErrors[] = [
-                'Cannot convert ' . $sliceReturnType . ' to HTML string.',
-                22,
                 'default.latte',
             ];
             $expectedErrors[] = [
@@ -2287,11 +2277,6 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
             $expectedErrors[] = [
                 'Parameter #1 $s of static method Latte\Runtime\Filters::capitalize() expects ' . $filterStringType . ', stdClass given.',
                 21,
-                'default.latte',
-            ];
-            $expectedErrors[] = [
-                'Cannot convert array<mixed>|string to HTML string.',
-                22,
                 'default.latte',
             ];
             $expectedErrors[] = [
@@ -3101,11 +3086,6 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
         }
         $this->analyse([__DIR__ . '/Fixtures/EscapesPresenter.php'], [
             [
-                'Cannot convert stdClass to JS string.',
-                2,
-                'default.latte',
-            ],
-            [
                 'Cannot convert stdClass to CSS string.',
                 3,
                 'default.latte',
@@ -3123,11 +3103,6 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
             [
                 'Cannot convert stdClass to HTMLCOMMENT string.',
                 6,
-                'default.latte',
-            ],
-            [
-                'Cannot convert stdClass to JS string.',
-                7,
                 'default.latte',
             ],
             [
