@@ -18,4 +18,39 @@ final class HtmlHelpers
     public static function escapeText(mixed $s): string
     {
     }
+
+    /**
+     * @param FilterString $s
+     */
+    public static function escapeAttr(mixed $s): string
+    {
+    }
+
+    /**
+     * @param FilterString $s
+     */
+    public static function escapeTag(mixed $s): string
+    {
+    }
+
+    /**
+     * @param FilterString $s
+     */
+    public static function escapeComment(mixed $s): string
+    {
+    }
+
+    /**
+     * @param FilterString $s
+     */
+    public static function escapeRawHtml(mixed $s): string
+    {
+    }
+
+    /**
+     * @param FilterString $s
+     */
+    public static function escapeQuotes(mixed $s): string
+    {
+    }
 }

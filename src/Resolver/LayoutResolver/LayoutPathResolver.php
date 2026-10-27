@@ -6,7 +6,6 @@ namespace Efabrica\PHPStanLatte\Resolver\LayoutResolver;
 
 use function dirname;
 use function file_get_contents;
-use function in_array;
 use function preg_match;
 use function realpath;
 use const DIRECTORY_SEPARATOR;
@@ -42,13 +41,23 @@ final class LayoutPathResolver
         } else {
             $layoutName = null;
         }
-        if ($layoutName !== null && !in_array($layoutName, ['none', 'auto'], true)) {
-            $layoutFilePath = realpath(dirname($templatePath) . DIRECTORY_SEPARATOR . $layoutName) ?: null;
-            if ($layoutFilePath !== null) {
+        $isQuoted = !isset($matches['bare']);
+        if ($layoutName === 'none') {
+            return null; // {layout none} disables the layout completely
+        }
+        if ($layoutName !== null && $layoutName !== 'auto') {
+            $layoutFilePath = realpath(dirname($templatePath) . DIRECTORY_SEPARATOR . $layoutName);
+            if ($layoutFilePath !== false) {
                 return $layoutFilePath;
+            }
+            // keep explicit literal paths so a missing layout is reported instead of
+            // silently replaced by @layout.latte; dynamic expressions have no path to check
+            if ($isQuoted || preg_match('/^\$|[(\[]|->|::/', $layoutName) !== 1) {
+                return dirname($templatePath) . DIRECTORY_SEPARATOR . $layoutName;
             }
         }
 
+        // no layout tag, {layout auto} or a dynamic layout name
         $layoutFilePath = realpath(dirname($templatePath) . DIRECTORY_SEPARATOR . '@layout.latte') ?: null;
         if ($layoutFilePath !== null) {
             return $layoutFilePath;

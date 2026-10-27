@@ -3093,4 +3093,53 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
         }
         $this->analyse([__DIR__ . '/Fixtures/SnippetsPresenter.php'], $expectedErrors);
     }
+
+    public function testEscapes(): void
+    {
+        if (!LatteVersion::isLatte31()) {
+            $this->markTestSkipped('Latte 3.1 moved escaping from Filters to dedicated runtime helpers.');
+        }
+        $this->analyse([__DIR__ . '/Fixtures/EscapesPresenter.php'], [
+            [
+                'Cannot convert stdClass to JS string.',
+                2,
+                'default.latte',
+            ],
+            [
+                'Cannot convert stdClass to CSS string.',
+                3,
+                'default.latte',
+            ],
+            [
+                'Cannot convert stdClass to ICAL string.',
+                4,
+                'default.latte',
+            ],
+            [
+                'Cannot convert stdClass to XML string.',
+                5,
+                'default.latte',
+            ],
+            [
+                'Cannot convert stdClass to HTMLCOMMENT string.',
+                6,
+                'default.latte',
+            ],
+            [
+                'Cannot convert stdClass to JS string.',
+                7,
+                'default.latte',
+            ],
+            [
+                'Cannot convert stdClass to CSS string.',
+                8,
+                'default.latte',
+            ],
+            [
+                'Cannot convert stdClass to HTMLCOMMENT string.',
+                9,
+                'default.latte',
+            ],
+        ]);
+    }
 }

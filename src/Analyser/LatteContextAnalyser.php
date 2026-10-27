@@ -62,6 +62,8 @@ final class LatteContextAnalyser
 
     private string $tmpDir;
 
+    private string $cacheKey;
+
     /**
      * @param AbstractLatteContextCollector[] $collectors
      */
@@ -74,7 +76,8 @@ final class LatteContextAnalyser
         TypeStringResolver $typeStringResolver,
         TempDirResolver $tempDirResolver,
         array $collectors,
-        bool $debugMode = false
+        bool $debugMode = false,
+        string $cacheKey = ''
     ) {
         $this->scopeFactory = $scopeFactory;
         $this->nodeScopeResolver = clone $nodeScopeResolver;
@@ -85,6 +88,7 @@ final class LatteContextAnalyser
         $this->typeStringResolver = $typeStringResolver;
         $this->collectorRegistry = new LatteContextCollectorRegistry($collectors);
         $this->tmpDir = $tempDirResolver->resolveCollectorDir();
+        $this->cacheKey = $cacheKey;
         if (file_exists($this->tmpDir) && $debugMode) {
             FileSystem::delete($this->tmpDir);
         }
@@ -218,6 +222,7 @@ final class LatteContextAnalyser
         $cacheKey = md5(
             $file .
             PHP_VERSION_ID .
+            $this->cacheKey .
             (class_exists(InstalledVersions::class) ? json_encode(InstalledVersions::getAllRawData()) : '')
         );
         return $this->tmpDir . basename($file) . '.' . $cacheKey . '.json';

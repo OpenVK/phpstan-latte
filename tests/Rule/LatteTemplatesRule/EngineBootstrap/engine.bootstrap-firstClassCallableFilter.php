@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\EngineBootstrap;
 
+use Closure;
 use Latte\Engine;
 use Stringable;
 
@@ -16,13 +17,24 @@ final class FirstClassCallableFilters extends ParentFirstClassCallableFilters im
         return $input;
     }
 
+    public function privateFilterCallable(): Closure
+    {
+        return $this->privateFilter(...);
+    }
+
     public function __toString(): string
     {
         return $this->objectFilter('filter');
+    }
+
+    private function privateFilter(string $input): string
+    {
+        return $input;
     }
 }
 
 $engine = new Engine();
 $engine->addFilter('objectFilterFirstClassCallable', (new FirstClassCallableFilters())->objectFilter(...));
 $engine->addFilter('inheritedFilterFirstClassCallable', (new FirstClassCallableFilters())->inheritedFilter(...));
+$engine->addFilter('privateFilterFirstClassCallable', (new FirstClassCallableFilters())->privateFilterCallable());
 return $engine;

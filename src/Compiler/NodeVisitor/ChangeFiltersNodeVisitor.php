@@ -155,6 +155,11 @@ final class ChangeFiltersNodeVisitor extends NodeVisitorAbstract implements Filt
             return null;
         }
 
+        // Non-public methods stay closures: the generated template class cannot call them.
+        if (!$scopeClass->getMethod($methodName)->isPublic()) {
+            return null;
+        }
+
         // An instance method callable keeps the object it was created on: use its class
         // so the most derived implementation is analysed, as with array callables.
         $closureThis = $reflection->getClosureThis();

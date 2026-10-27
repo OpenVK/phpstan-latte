@@ -5,8 +5,9 @@ parameters:
         - stubs/Latte/Essential/Filters.stub
         - stubs/Latte/Runtime/FilterInfo.stub
         - stubs/Latte/Runtime/Filters.stub
-        - stubs/Latte/Runtime/HtmlHelpers.stub
         - stubs/Latte/Runtime/Helpers.stub
+        - stubs/Latte/Runtime/HtmlHelpers.stub
+        - stubs/Latte/Runtime/XmlHelpers.stub
         - stubs/Latte/Runtime/HtmlStringable.stub
         - stubs/Latte/Runtime/Html.stub
         - stubs/Nette/HtmlStringable.stub
@@ -137,6 +138,7 @@ services:
         arguments:
             parser: @latteCurrentPhpVersionRichParser
             debugMode: %latte.debugMode%
+            cacheKey: ::md5(::json_encode(%latte%))
 
     # Latte template resolvers
     - Efabrica\PHPStanLatte\LatteTemplateResolver\Nette\NetteApplicationUIPresenter

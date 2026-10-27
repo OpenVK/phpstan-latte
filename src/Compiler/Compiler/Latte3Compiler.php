@@ -11,6 +11,7 @@ use Latte\Essential\RawPhpExtension;
 use Latte\Extension;
 use Nette\Bridges\ApplicationLatte\UIExtension;
 use Nette\Bridges\FormsLatte\FormsExtension;
+use PHPStan\ShouldNotHappenException;
 use function array_keys;
 use function array_map;
 use function array_merge;
@@ -101,11 +102,17 @@ final class Latte3Compiler extends AbstractCompiler
         }
         // Inject the class comment (context, @property $global, @generated) ourselves: Latte
         // 3.0.27+ drops multi-line template names that older versions used as the class docblock.
+        $classHeader = "final class {$className} extends";
+        $classComment = str_replace('*/', '* /', $this->generateClassComment($className, $context));
         $phpContent = str_replace(
-            "final class {$className} extends",
-            '/** source: ' . $this->generateClassComment($className, $context) . " */\nfinal class {$className} extends",
-            $phpContent
+            $classHeader,
+            '/** source: ' . $classComment . " */\n" . $classHeader,
+            $phpContent,
+            $replaced
         );
+        if ($replaced !== 1) {
+            throw new ShouldNotHappenException('Unable to inject the compiled template class comment.');
+        }
         $phpContent = $this->fixLines($phpContent);
         $phpContent = $this->addTypes($phpContent, $className, $actualClass);
         return $phpContent;
