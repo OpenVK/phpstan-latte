@@ -176,7 +176,12 @@ final class ChangeFiltersNodeVisitor extends NodeVisitorAbstract implements Filt
         }
 
         $type = $this->getType($class);
-        if ($type === null || !(new ObjectType('\Latte\Runtime\Template'))->isSuperTypeOf($type)->yes()) {
+        if ($type === null) {
+            // without the type resolution pass fall back to the generated class header
+            if ($class->extends === null || $class->extends->toString() !== 'Latte\Runtime\Template') {
+                return;
+            }
+        } elseif (!(new ObjectType('\Latte\Runtime\Template'))->isSuperTypeOf($type)->yes()) {
             return;
         }
 

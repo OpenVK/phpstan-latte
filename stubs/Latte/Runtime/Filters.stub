@@ -48,6 +48,7 @@ class Filters
 
     /**
      * json_encode() accepts any value, including arrays and objects.
+     * @param mixed $s
      */
     public static function escapeJs($s): string
     {

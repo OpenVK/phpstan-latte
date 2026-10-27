@@ -1,0 +1,5 @@
+parameters:
+    latte:
+        maxTemplateVariants: 1
+        templateTypes:
+            - Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\PresenterWithoutModule\Source\CustomTemplate

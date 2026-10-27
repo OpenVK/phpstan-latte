@@ -3079,6 +3079,17 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
         $this->analyse([__DIR__ . '/Fixtures/SnippetsPresenter.php'], $expectedErrors);
     }
 
+    public function testMissingLayout(): void
+    {
+        $this->analyse([__DIR__ . '/Fixtures/MissingLayoutPresenter.php'], [
+            [
+                'Layout template ' . __DIR__ . '/Fixtures/templates/MissingLayout/missing.latte does not exist.',
+                -1,
+                'default.latte',
+            ],
+        ]);
+    }
+
     public function testEscapes(): void
     {
         if (!LatteVersion::isLatte31()) {

@@ -7,7 +7,7 @@ namespace Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\EngineBootstrap;
 use Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\LatteTemplatesRuleTest;
 
 /**
- * @requires PHP > 8.1
+ * @requires PHP >= 8.1
  */
 final class LatteTemplatesRuleForEngineBootstrapFirstClassCallableFilterTest extends LatteTemplatesRuleTest
 {

@@ -18,6 +18,7 @@ use PHPStan\Rules\NonIgnorableRuleError;
 use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Rules\TipRuleError;
 use function array_merge;
+use function is_file;
 use function json_encode;
 use function md5;
 use function preg_match;
@@ -140,7 +141,6 @@ final class ErrorBuilder
         $error = $this->transformError($error);
 
         $ruleErrorBuilder = RuleErrorBuilder::message($error->getMessage())
-            ->file($templatePath)
             ->identifier('latte.error')
             ->metadata(array_merge($originalError->getMetadata(), [
                 'context' => $context === '' ? null : $context,
@@ -148,6 +148,11 @@ final class ErrorBuilder
                 'compiled_template_path' => $compiledTemplatePath,
                 'compiled_template_error_line' => $originalError->getLine(),
             ]));
+        if (is_file($templatePath)) {
+            $ruleErrorBuilder->file($templatePath);
+        } elseif ($compiledTemplatePath !== null && is_file($compiledTemplatePath)) {
+            $ruleErrorBuilder->file($compiledTemplatePath);
+        }
         if ($originalError->getLine()) {
             $ruleErrorBuilder->line($lineMap->get($originalError->getLine()));
         }

@@ -11,7 +11,9 @@ use Efabrica\PHPStanLatte\Template\Template;
 use Nette\Utils\Finder;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Rules\RuleErrorBuilder;
 use SplFileInfo;
+use function is_file;
 use function preg_match;
 use function str_contains;
 
@@ -40,7 +42,13 @@ abstract class AbstractClassStandaloneTemplateResolver extends AbstractClassTemp
 
             $layoutFilePath = $this->layoutPathResolver->resolve($standaloneTemplateFile);
             if ($layoutFilePath !== null) {
-                $result->addTemplate(new Template($layoutFilePath, $classReflection->getName(), null, $templateContext));
+                if (is_file($layoutFilePath)) {
+                    $result->addTemplate(new Template($layoutFilePath, $classReflection->getName(), null, $templateContext));
+                } else {
+                    $result->addErrorFromBuilder(RuleErrorBuilder::message('Layout template ' . $layoutFilePath . ' does not exist.')
+                        ->identifier('latte.notFound')
+                        ->file($standaloneTemplateFile));
+                }
             }
         }
         return $result;

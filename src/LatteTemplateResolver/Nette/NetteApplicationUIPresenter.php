@@ -23,6 +23,7 @@ use function count;
 use function dirname;
 use function file_exists;
 use function is_dir;
+use function is_file;
 use function lcfirst;
 use function preg_replace;
 use function str_replace;
@@ -149,7 +150,13 @@ final class NetteApplicationUIPresenter extends AbstractClassTemplateResolver
 
                 $layoutFilePath = $this->layoutPathResolver->resolve($template);
                 if ($layoutFilePath !== null) {
-                    $result->addTemplate(new Template($layoutFilePath, $classReflection->getName(), $actionName, $actionDefinition['templateContext']));
+                    if (is_file($layoutFilePath)) {
+                        $result->addTemplate(new Template($layoutFilePath, $classReflection->getName(), $actionName, $actionDefinition['templateContext']));
+                    } else {
+                        $result->addErrorFromBuilder(RuleErrorBuilder::message('Layout template ' . $layoutFilePath . ' does not exist.')
+                            ->identifier('latte.notFound')
+                            ->file($template));
+                    }
                 }
             }
 
@@ -168,7 +175,13 @@ final class NetteApplicationUIPresenter extends AbstractClassTemplateResolver
 
             $layoutFilePath = $this->layoutPathResolver->resolve($actionDefinition['defaultTemplate']);
             if ($layoutFilePath !== null) {
-                $result->addTemplate(new Template($layoutFilePath, $classReflection->getName(), $actionName, $actionDefinition['templateContext']));
+                if (is_file($layoutFilePath)) {
+                    $result->addTemplate(new Template($layoutFilePath, $classReflection->getName(), $actionName, $actionDefinition['templateContext']));
+                } else {
+                    $result->addErrorFromBuilder(RuleErrorBuilder::message('Layout template ' . $layoutFilePath . ' does not exist.')
+                        ->identifier('latte.notFound')
+                        ->file($actionDefinition['defaultTemplate']));
+                }
             }
         }
 

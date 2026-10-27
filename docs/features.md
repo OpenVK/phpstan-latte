@@ -67,8 +67,10 @@ node scope resolver over the generated code and the result is used by
 of the largest consumers of retained memory (compiled classes and reflection
 caches cannot be released in PHP).
 
-Disabling the pass skips those visitors and saves memory at the cost of less
-precise analysis inside templates:
+Disabling the pass skips the type attribution. Type-aware visitors then have no
+inferred types to work with, while semantic transformations (filters, functions,
+snippets) still run. This saves memory at the cost of less precise analysis
+inside templates:
 
 ```neon
 parameters:
