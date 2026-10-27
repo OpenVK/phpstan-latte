@@ -95,19 +95,17 @@ final class Latte3Compiler extends AbstractCompiler
             $templateGenerator->buildClass($templateNode);
             /** @var string $phpContent */
             $phpContent = $templateGenerator->generateCode($className, null, $this->strictMode);
-            $phpContent = str_replace(
-                "final class {$className} extends",
-                '/** source: ' . $this->generateClassComment($className, $context) . " */\nfinal class {$className} extends",
-                $phpContent
-            );
         } else {
-            $phpContent = $templateGenerator->generate(
-                $templateNode,
-                $className,
-                $this->generateClassComment($className, $context),
-                $this->strictMode
-            );
+            /** @var string $phpContent */
+            $phpContent = $templateGenerator->generate($templateNode, $className, null, $this->strictMode);
         }
+        // Inject the class comment (context, @property $global, @generated) ourselves: Latte
+        // 3.0.27+ drops multi-line template names that older versions used as the class docblock.
+        $phpContent = str_replace(
+            "final class {$className} extends",
+            '/** source: ' . $this->generateClassComment($className, $context) . " */\nfinal class {$className} extends",
+            $phpContent
+        );
         $phpContent = $this->fixLines($phpContent);
         $phpContent = $this->addTypes($phpContent, $className, $actualClass);
         return $phpContent;

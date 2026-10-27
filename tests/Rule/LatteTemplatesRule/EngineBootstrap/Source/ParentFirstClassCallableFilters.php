@@ -6,7 +6,10 @@ namespace Efabrica\PHPStanLatte\Tests\Rule\LatteTemplatesRule\EngineBootstrap;
 
 abstract class ParentFirstClassCallableFilters
 {
-    public function inheritedFilter(string $input): static
+    /**
+     * @return static
+     */
+    public function inheritedFilter(string $input)
     {
         return $this;
     }
