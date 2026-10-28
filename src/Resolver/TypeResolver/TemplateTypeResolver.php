@@ -15,6 +15,17 @@ use PHPStan\Type\UnionType;
 
 final class TemplateTypeResolver
 {
+    /** @var string[] */
+    private array $templateTypes;
+
+    /**
+     * @param string[] $templateTypes additional classes considered Latte template objects
+     */
+    public function __construct(array $templateTypes = [])
+    {
+        $this->templateTypes = $templateTypes;
+    }
+
     public function resolve(Type $type): bool
     {
         if ($type instanceof UnionType) {
@@ -24,7 +35,18 @@ final class TemplateTypeResolver
                 }
             }
         }
-        return (new ObjectType('Nette\Application\UI\Template'))->isSuperTypeOf($type)->yes() || (new ObjectType('Nette\Application\UI\ITemplate'))->isSuperTypeOf($type)->yes();
+        if ((new ObjectType('Nette\Application\UI\Template'))->isSuperTypeOf($type)->yes()) {
+            return true;
+        }
+        if ((new ObjectType('Nette\Application\UI\ITemplate'))->isSuperTypeOf($type)->yes()) {
+            return true;
+        }
+        foreach ($this->templateTypes as $templateType) {
+            if ((new ObjectType($templateType))->isSuperTypeOf($type)->yes()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public function resolveByNodeAndScope(Node $node, Scope $scope): bool

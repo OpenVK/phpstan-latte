@@ -6,6 +6,8 @@ parameters:
         - stubs/Latte/Runtime/FilterInfo.stub
         - stubs/Latte/Runtime/Filters.stub
         - stubs/Latte/Runtime/Helpers.stub
+        - stubs/Latte/Runtime/HtmlHelpers.stub
+        - stubs/Latte/Runtime/XmlHelpers.stub
         - stubs/Latte/Runtime/HtmlStringable.stub
         - stubs/Latte/Runtime/Html.stub
         - stubs/Nette/HtmlStringable.stub
@@ -31,7 +33,11 @@ parameters:
         extensions: []
         resolveAllPossiblePaths: false
         reportUnanalysedTemplates: false
+        maxTemplateVariants: 0
+        breakIncludeCycles: false
+        resolveTypes: true
         collectedPaths: []
+        templateTypes: []
         features:
             transformDynamicFormControlNamesToString: false
             phpstanCommand: null
@@ -62,7 +68,11 @@ parametersSchema:
         extensions: arrayOf(object())
         resolveAllPossiblePaths: bool()
         reportUnanalysedTemplates: bool()
+        maxTemplateVariants: int()
+        breakIncludeCycles: bool()
+        resolveTypes: bool()
         collectedPaths: arrayOf(string())
+        templateTypes: arrayOf(string())
         features: structure([
             transformDynamicFormControlNamesToString: bool()
             phpstanCommand: schema(string(), nullable())
@@ -118,6 +128,7 @@ services:
         factory: Efabrica\PHPStanLatte\Compiler\Postprocessor
         arguments:
             parser: @latteCurrentPhpVersionRichParser
+            resolveTypes: %latte.resolveTypes%
 
     - Efabrica\PHPStanLatte\Compiler\TypeToPhpDoc
     - Efabrica\PHPStanLatte\Compiler\Helper\TemplateContextHelper
@@ -127,6 +138,7 @@ services:
         arguments:
             parser: @latteCurrentPhpVersionRichParser
             debugMode: %latte.debugMode%
+            cacheKey: ::md5(::json_encode(%latte%))
 
     # Latte template resolvers
     - Efabrica\PHPStanLatte\LatteTemplateResolver\Nette\NetteApplicationUIPresenter
@@ -135,7 +147,21 @@ services:
 
     # Type resolvers
     - Efabrica\PHPStanLatte\Resolver\TypeResolver\TypeResolver
-    - Efabrica\PHPStanLatte\Resolver\TypeResolver\TemplateTypeResolver
+    - Efabrica\PHPStanLatte\Resolver\TypeResolver\TemplateTypeResolver(%latte.templateTypes%)
+
+    -
+        class: Efabrica\PHPStanLatte\Type\SliceReturnTypeExtension
+        arguments:
+            className: Latte\Essential\Filters
+        tags:
+            - phpstan.broker.dynamicStaticMethodReturnTypeExtension
+
+    -
+        class: Efabrica\PHPStanLatte\Type\SliceReturnTypeExtension
+        arguments:
+            className: Latte\Runtime\Filters
+        tags:
+            - phpstan.broker.dynamicStaticMethodReturnTypeExtension
 
     # Value resolvers
     - Efabrica\PHPStanLatte\Resolver\ValueResolver\ValueResolver()

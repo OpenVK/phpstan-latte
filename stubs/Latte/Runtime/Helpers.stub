@@ -2,9 +2,16 @@
 
 namespace Latte\Runtime;
 
+use Latte\Runtime\HtmlStringable as LatteHtmlStringable;
+use Nette\HtmlStringable as NetteHtmlStringable;
+use Stringable;
+
+/**
+ * Latte 3.1 moved escaping from Latte\Runtime\Filters to Helpers.
+ * @phpstan-type FilterString string|int|float|bool|null|Stringable|NetteHtmlStringable|LatteHtmlStringable
+ */
 class Helpers implements HtmlStringable
 {
-
     /**
      * @template A
      * @param A $value
@@ -14,4 +21,24 @@ class Helpers implements HtmlStringable
     {
     }
 
+    /**
+     * @param FilterString $s
+     */
+    public static function escapeCss(mixed $s): string
+    {
+    }
+
+    /**
+     * json_encode() accepts any value, including arrays and objects.
+     */
+    public static function escapeJs(mixed $s): string
+    {
+    }
+
+    /**
+     * @param FilterString $s
+     */
+    public static function escapeICal(mixed $s): string
+    {
+    }
 }

@@ -10,14 +10,25 @@ use function preg_match;
 
 final class EscapeErrorTransformer implements ErrorTransformerInterface
 {
-    private const HTML_OUTPUT_REGEX = '/Parameter #1 \$s of static method Latte\\\\(Runtime|Essentials)\\\\Filters::escape(?<escape>.*)\(\) expects [^ ]+, (?<type>.*) given\./';
+    private const HTML_OUTPUT_REGEX = '/Parameter #1 \$s of static method Latte\\\\(Runtime|Essentials)\\\\(?<helper>Filters|HtmlHelpers|Helpers|XmlHelpers)::escape(?<escape>.*)\(\) expects [^ ]+, (?<type>.*) given\./';
 
     public function transform(Error $error): Error
     {
         if (preg_match(self::HTML_OUTPUT_REGEX, $error->getMessage(), $match) === 1) {
             $escape = Strings::upper($match['escape']);
-            if ($escape === 'HTMLTEXT') {
-                $escape = 'HTML';
+            switch ($escape) {
+                case 'TEXT':
+                    $escape = $match['helper'] === 'XmlHelpers' ? 'XML' : 'HTML';
+                    break;
+                case 'HTMLTEXT':
+                    $escape = 'HTML';
+                    break;
+                case 'XMLTEXT':
+                    $escape = 'XML';
+                    break;
+                case 'COMMENT':
+                    $escape = 'HTMLCOMMENT';
+                    break;
             }
             $message = "Cannot convert {$match['type']} to {$escape} string.";
             $error->setMessage($message);

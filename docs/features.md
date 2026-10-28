@@ -55,3 +55,27 @@ parameters:
         features:
             analyseLayoutFiles: true    
 ```
+
+## resolveTypes
+
+- type: boolean
+- default: true
+
+Compiled templates are type-resolved before analysis: the compiler runs PHPStan's
+node scope resolver over the generated code and the result is used by
+`ExprTypeNodeVisitors`. On projects with many template variants this pass is one
+of the largest consumers of retained memory (compiled classes and reflection
+caches cannot be released in PHP).
+
+Disabling the pass skips the type attribution. Type-aware visitors then have no
+inferred types to work with, while semantic transformations (filters, functions,
+snippets) still run. This saves memory at the cost of less precise analysis
+inside templates; form-specific visitors in particular need inferred types and
+will skip their transformations:
+
+```neon
+parameters:
+    latte:
+        resolveTypes: false
+```
+

@@ -18,6 +18,7 @@ use PHPStan\Rules\NonIgnorableRuleError;
 use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Rules\TipRuleError;
 use function array_merge;
+use function is_file;
 use function json_encode;
 use function md5;
 use function preg_match;
@@ -73,6 +74,7 @@ final class ErrorBuilder
         '/Cannot convert mixed to .*\./',
         '/Call to function array_key_exists\(\) with .* will always evaluate to (true|false)\./',
         '/Parameter #2 \$array of function implode expects array<string>, array<int, mixed> given\./', // n:class generates implode with mixed array
+        '/Call to function unset\(\) contains undefined variable .*/', // Latte 3.1 ScopedLoopVariables generated code
     ];
 
     /** @var string[] */
@@ -139,7 +141,6 @@ final class ErrorBuilder
         $error = $this->transformError($error);
 
         $ruleErrorBuilder = RuleErrorBuilder::message($error->getMessage())
-            ->file($templatePath)
             ->identifier('latte.error')
             ->metadata(array_merge($originalError->getMetadata(), [
                 'context' => $context === '' ? null : $context,
@@ -147,6 +148,11 @@ final class ErrorBuilder
                 'compiled_template_path' => $compiledTemplatePath,
                 'compiled_template_error_line' => $originalError->getLine(),
             ]));
+        if (is_file($templatePath)) {
+            $ruleErrorBuilder->file($templatePath);
+        } elseif ($compiledTemplatePath !== null && is_file($compiledTemplatePath)) {
+            $ruleErrorBuilder->file($compiledTemplatePath);
+        }
         if ($originalError->getLine()) {
             $ruleErrorBuilder->line($lineMap->get($originalError->getLine()));
         }
@@ -178,7 +184,7 @@ final class ErrorBuilder
             if ($ruleError instanceof MetadataRuleError) {
                 $metaData = $ruleError->getMetadata();
             }
-            $metaData['is_warning'] = $this->isWarning($ruleError->getMessage());
+            $metaData['is_warning'] = $metaData['is_warning'] ?? $this->isWarning($ruleError->getMessage());
             $newRuleError->metadata($metaData);
 
             if ($ruleError instanceof FileRuleError) {

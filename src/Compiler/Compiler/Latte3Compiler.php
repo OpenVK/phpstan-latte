@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Efabrica\PHPStanLatte\Compiler\Compiler;
 
+use Efabrica\PHPStanLatte\Compiler\LatteVersion;
 use Latte\Compiler\TemplateGenerator;
 use Latte\Engine;
 use Latte\Essential\RawPhpExtension;
 use Latte\Extension;
+use Latte\Feature;
 use Nette\Bridges\ApplicationLatte\UIExtension;
 use Nette\Bridges\FormsLatte\FormsExtension;
+use PHPStan\ShouldNotHappenException;
 use function array_keys;
 use function array_map;
 use function array_merge;
@@ -20,6 +23,9 @@ use function is_array;
 use function is_object;
 use function md5;
 use function preg_replace;
+use function str_replace;
+use function token_get_all;
+use const T_COMMENT;
 
 final class Latte3Compiler extends AbstractCompiler
 {
@@ -44,12 +50,19 @@ final class Latte3Compiler extends AbstractCompiler
         if (!is_array($extensions)) {
             $extensions = [];
         }
+        $features = '';
+        if (LatteVersion::isLatte31()) {
+            foreach (Feature::cases() as $feature) {
+                $features .= $feature->name . ($this->engine->hasFeature($feature) ? '1' : '0');
+            }
+        }
         return md5(
             implode('', array_keys($this->getFilters())) .
             implode('', array_keys($this->getFunctions())) .
             implode('', array_map(function ($extension) {
                 return is_object($extension) ? get_class($extension) : null;
-            }, $extensions))
+            }, $extensions)) .
+            $features
         );
     }
 
@@ -88,12 +101,32 @@ final class Latte3Compiler extends AbstractCompiler
         $this->engine->applyPasses($templateNode);
         $className = $this->generateClassName();
         $templateGenerator = new TemplateGenerator();
-        $phpContent = $templateGenerator->generate(
-            $templateNode,
-            $className,
-            $this->generateClassComment($className, $context),
-            $this->strictMode
+        if (LatteVersion::isLatte31()) {
+            // Latte 3.1+ (TemplateGenerator::generate() was split into buildClass() + generateCode())
+            $features = [];
+            foreach (Feature::cases() as $feature) {
+                $features[$feature->name] = $this->engine->hasFeature($feature);
+            }
+            $templateGenerator->buildClass($templateNode, $features);
+            /** @var string $phpContent */
+            $phpContent = $templateGenerator->generateCode($className, null, $this->strictMode);
+        } else {
+            /** @var string $phpContent */
+            $phpContent = $templateGenerator->generate($templateNode, $className, null, $this->strictMode);
+        }
+        // Inject the class comment (context, @property $global, @generated) ourselves: Latte
+        // 3.0.27+ drops multi-line template names that older versions used as the class docblock.
+        $classHeader = "final class {$className} extends";
+        $classComment = str_replace('*/', '* /', $this->generateClassComment($className, $context));
+        $phpContent = str_replace(
+            $classHeader,
+            '/** source: ' . $classComment . " */\n" . $classHeader,
+            $phpContent,
+            $replaced
         );
+        if ($replaced !== 1) {
+            throw new ShouldNotHappenException('Unable to inject the compiled template class comment.');
+        }
         $phpContent = $this->fixLines($phpContent);
         $phpContent = $this->addTypes($phpContent, $className, $actualClass);
         return $phpContent;
@@ -111,6 +144,9 @@ final class Latte3Compiler extends AbstractCompiler
 
     private function fixLines(string $phpContent): string
     {
+        // Latte 3.1+ emits "/* pos <line>[:<column>] */" instead of "/* line <line> */"
+        $phpContent = $this->normalizePosComments($phpContent);
+
         // fix lines after $component->render()
         $pattern = '/\$ʟ_tmp = \$this->global->uiControl->getComponent(.*?)\$ʟ_tmp->render\((.*?)\) (?<line>(.*?)\/\*(.*?)line (?<number>\d+)(.*?)\*\/);/s';
         $phpContent = preg_replace($pattern, '${3}' . "\n\t\t" . '$ʟ_tmp = $this->global->uiControl->getComponent${1}$ʟ_tmp->render(${2});', $phpContent) ?: '';
@@ -118,5 +154,18 @@ final class Latte3Compiler extends AbstractCompiler
         // fix lines at the end of lines
         $pattern = '/(.*?) (?<line>\/\*(.*?)line (?<number>\d+)(.*?)\*\/)/';
         return preg_replace($pattern, '${2}${1}', $phpContent) ?: '';
+    }
+
+    private function normalizePosComments(string $phpContent): string
+    {
+        $result = '';
+        foreach (token_get_all($phpContent) as $token) {
+            if (is_array($token) && $token[0] === T_COMMENT) {
+                $result .= preg_replace('/\/\* pos (\d+)(?::\d+)? \*\//', '/* line $1 */', $token[1]) ?: $token[1];
+            } else {
+                $result .= is_array($token) ? $token[1] : $token;
+            }
+        }
+        return $result;
     }
 }

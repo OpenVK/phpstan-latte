@@ -57,6 +57,8 @@ final class Postprocessor
 
     private NameResolver $nameResolver;
 
+    private bool $resolveTypes;
+
     public function __construct(
         Parser $parser,
         NodeVisitorStorage $nodeVisitorStorage,
@@ -64,7 +66,8 @@ final class Postprocessor
         CompilerInterface $compiler,
         ScopeFactory $scopeFactory,
         NodeScopeResolver $nodeScopeResolver,
-        NameResolver $nameResolver
+        NameResolver $nameResolver,
+        bool $resolveTypes = true
     ) {
         $this->parser = $parser;
         $this->nodeVisitorStorage = $nodeVisitorStorage;
@@ -73,6 +76,7 @@ final class Postprocessor
         $this->scopeFactory = $scopeFactory;
         $this->nodeScopeResolver = $nodeScopeResolver;
         $this->nameResolver = $nameResolver;
+        $this->resolveTypes = $resolveTypes;
     }
 
     public function getCacheKey(): string
@@ -102,23 +106,30 @@ final class Postprocessor
         if ($realPath === '') {
             return '';
         }
-        require($compileFilePath); // load type definitions from compiled template
+        require_once($compileFilePath); // load type definitions from compiled template
 
         $scope = $this->scopeFactory->create(ScopeContext::create($realPath));
 
         $phpStmts = $this->findNodes($phpContent, $compileFilePath);
 
-        $nodeScopeResolver = clone $this->nodeScopeResolver;
-        $nodeScopeResolver->processNodes($phpStmts, $scope, function (Node $node, Scope $scope) {
-            if ($node instanceof Expr) {
-                $node->setAttribute(ExprTypeNodeVisitorInterface::TYPE_ATTRIBUTE, $scope->getType($node));
-            } elseif ($node instanceof Class_ || $node instanceof Interface_) {
-                /** @var string $name */
-                $name = $this->nameResolver->resolve($node->name);
-                $node->setAttribute(ExprTypeNodeVisitorInterface::TYPE_ATTRIBUTE, new ObjectType($name));
-            }
-        });
+        // Type resolution pass: making it optional trades analysis precision
+        // inside templates (ExprTypeNodeVisitors) for a significant amount of
+        // retained memory on projects with many template variants.
+        if ($this->resolveTypes) {
+            $nodeScopeResolver = clone $this->nodeScopeResolver;
+            $nodeScopeResolver->processNodes($phpStmts, $scope, function (Node $node, Scope $scope) {
+                if ($node instanceof Expr) {
+                    $node->setAttribute(ExprTypeNodeVisitorInterface::TYPE_ATTRIBUTE, $scope->getType($node));
+                } elseif ($node instanceof Class_ || $node instanceof Interface_) {
+                    /** @var string $name */
+                    $name = $this->nameResolver->resolve($node->name);
+                    $node->setAttribute(ExprTypeNodeVisitorInterface::TYPE_ATTRIBUTE, new ObjectType($name));
+                }
+            });
+        }
 
+        // Semantic (scope) visitors still run without type resolution; type-aware ones
+        // simply have no inferred types to work with.
         foreach ($this->nodeVisitorStorage->getNodeVisitors(true) as $nodeVisitors) {
             $phpStmts = $this->processNodeVisitors($phpStmts, $nodeVisitors, $template, $scope);
         }

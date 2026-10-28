@@ -1,0 +1,3 @@
+parameters:
+    latte:
+        engineBootstrap: %rootDir%/../../../tests/Rule/LatteTemplatesRule/EngineBootstrap/engine.bootstrap-scopedLoopVariables.php

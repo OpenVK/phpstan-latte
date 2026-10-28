@@ -47,6 +47,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\ClosureTypeFactory;
 use PHPStan\Type\ObjectType;
 use PHPStan\Type\ThisType;
+use ReflectionFunction;
 use function array_merge;
 use function array_slice;
 use function explode;
@@ -143,6 +144,39 @@ final class ChangeFunctionsNodeVisitor extends NodeVisitorAbstract implements Fu
         return is_string($function) && (str_starts_with($function, 'Closure(') || str_starts_with($function, '\Closure(') || str_starts_with($function, 'callable('));
     }
 
+    /**
+     * Latte 3.1+ registers functions as first-class callables (Closure objects) instead of
+     * array callables. Detect them and convert back to [class, method] so the underlying
+     * method is used (and stubs for Latte built-in functions apply again).
+     *
+     * @return array{string, string}|null
+     */
+    private function resolveFirstClassCallable(Closure $function): ?array
+    {
+        $reflection = new ReflectionFunction($function);
+        $scopeClass = $reflection->getClosureScopeClass();
+        if ($scopeClass === null) {
+            return null;
+        }
+
+        $methodName = $reflection->getName();
+        if ($methodName[0] === '{' || !$scopeClass->hasMethod($methodName)) {
+            return null;
+        }
+
+        // Non-public methods stay closures: the generated template class cannot call them.
+        if (!$scopeClass->getMethod($methodName)->isPublic()) {
+            return null;
+        }
+
+        // An instance method callable keeps the object it was created on: use its class
+        // so the most derived implementation is analysed, as with array callables.
+        $closureThis = $reflection->getClosureThis();
+        $className = $closureThis !== null ? get_class($closureThis) : $scopeClass->getName();
+
+        return [$className, $methodName];
+    }
+
     private function addFunctionVariables(ClassMethod $node): void
     {
         $class = $node->getAttribute('parent');
@@ -151,7 +185,12 @@ final class ChangeFunctionsNodeVisitor extends NodeVisitorAbstract implements Fu
         }
 
         $type = $this->getType($class);
-        if ($type === null || !(new ObjectType('\Latte\Runtime\Template'))->isSuperTypeOf($type)->yes()) {
+        if ($type === null) {
+            // without the type resolution pass fall back to the generated class header
+            if ($class->extends === null || $class->extends->toString() !== 'Latte\Runtime\Template') {
+                return;
+            }
+        } elseif (!(new ObjectType('\Latte\Runtime\Template'))->isSuperTypeOf($type)->yes()) {
             return;
         }
 
@@ -164,7 +203,7 @@ final class ChangeFunctionsNodeVisitor extends NodeVisitorAbstract implements Fu
                 $variableType = $variableType->getStaticObjectType();
             }
 
-            $arrayShapeItems[] = new ArrayShapeItemNode(new ConstExprStringNode($variable->getName(), ConstExprStringNode::SINGLE_QUOTED), $variable->mightBeUndefined(), $variableType->toPhpDocNode());
+            $arrayShapeItems[] = new ArrayShapeItemNode(new ConstExprStringNode($variable->getName(), ConstExprStringNode::SINGLE_QUOTED), $variable->mightBeUndefined(), TypeHelper::toPhpDocNode($variableType));
         }
 
         if ($arrayShapeItems === []) {
@@ -191,6 +230,10 @@ final class ChangeFunctionsNodeVisitor extends NodeVisitorAbstract implements Fu
     {
         $variables = [];
         foreach ($this->functions as $functionName => $function) {
+            if ($function instanceof Closure) {
+                $function = $this->resolveFirstClassCallable($function) ?? $function;
+            }
+
             if ($this->isCallableString($function)) {
                 $variableName = $this->createFunctionVariableName($functionName);
                 /** @var string $function */
@@ -246,6 +289,10 @@ final class ChangeFunctionsNodeVisitor extends NodeVisitorAbstract implements Fu
         $function = $this->functions[$functionName] ?? null;
         if ($function === null) {
             return null;
+        }
+
+        if ($function instanceof Closure) {
+            $function = $this->resolveFirstClassCallable($function) ?? $function;
         }
 
         if ($function instanceof Closure || $this->isCallableString($function)) {

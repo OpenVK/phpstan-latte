@@ -14,4 +14,9 @@ final class LatteTemplatesRuleForPresenterWithNoMappingWithSeparatedPHPStanComma
             __DIR__ . '/phpstanCommand.neon',
         ]);
     }
+
+    protected function usesSeparatedPhpStanCommand(): bool
+    {
+        return true;
+    }
 }

@@ -62,6 +62,8 @@ final class LatteContextAnalyser
 
     private string $tmpDir;
 
+    private string $cacheKey;
+
     /**
      * @param AbstractLatteContextCollector[] $collectors
      */
@@ -74,7 +76,8 @@ final class LatteContextAnalyser
         TypeStringResolver $typeStringResolver,
         TempDirResolver $tempDirResolver,
         array $collectors,
-        bool $debugMode = false
+        bool $debugMode = false,
+        string $cacheKey = ''
     ) {
         $this->scopeFactory = $scopeFactory;
         $this->nodeScopeResolver = clone $nodeScopeResolver;
@@ -85,6 +88,7 @@ final class LatteContextAnalyser
         $this->typeStringResolver = $typeStringResolver;
         $this->collectorRegistry = new LatteContextCollectorRegistry($collectors);
         $this->tmpDir = $tempDirResolver->resolveCollectorDir();
+        $this->cacheKey = $cacheKey;
         if (file_exists($this->tmpDir) && $debugMode) {
             FileSystem::delete($this->tmpDir);
         }
@@ -218,6 +222,7 @@ final class LatteContextAnalyser
         $cacheKey = md5(
             $file .
             PHP_VERSION_ID .
+            $this->cacheKey .
             (class_exists(InstalledVersions::class) ? json_encode(InstalledVersions::getAllRawData()) : '')
         );
         return $this->tmpDir . basename($file) . '.' . $cacheKey . '.json';
@@ -226,7 +231,7 @@ final class LatteContextAnalyser
     private function saveLatteContextDataToCache(string $file, LatteContextData $fileResult): void
     {
         if (!is_dir($this->tmpDir)) {
-            Filesystem::createDir($this->tmpDir, 0777);
+            FileSystem::createDir($this->tmpDir, 0777);
         }
 
         $cacheFile = $this->cacheFilename($file);
@@ -243,16 +248,16 @@ final class LatteContextAnalyser
 
         $cacheData = [
             'file' => $file,
-            'fileHash' => sha1(Filesystem::read($file)),
+            'fileHash' => sha1(FileSystem::read($file)),
             'data' => $data,
         ];
         foreach ($fileResult->getRelatedFiles() as $relatedFile) {
             $cacheData['dependencies'][] = [
                 'file' => $relatedFile,
-                'fileHash' => sha1(Filesystem::read($relatedFile)),
+                'fileHash' => sha1(FileSystem::read($relatedFile)),
             ];
         }
-        Filesystem::write(
+        FileSystem::write(
             $cacheFile,
             Json::encode($cacheData, JSON_PRETTY_PRINT)
         );
@@ -266,7 +271,7 @@ final class LatteContextAnalyser
         }
 
         try {
-            $cacheData = Json::decode(Filesystem::read($cacheFile), JSON_OBJECT_AS_ARRAY);
+            $cacheData = Json::decode(FileSystem::read($cacheFile), JSON_OBJECT_AS_ARRAY);
         } catch (Exception $e) {
             FileSystem::delete($cacheFile);
             return null;
@@ -286,7 +291,7 @@ final class LatteContextAnalyser
         }
 
         // Check if the file has changed since the cache was created
-        if (sha1(Filesystem::read($file)) !== $fileHash) {
+        if (sha1(FileSystem::read($file)) !== $fileHash) {
             return null;
         }
 
@@ -304,7 +309,7 @@ final class LatteContextAnalyser
                     return null;
                 }
                 // Check if the dependency file has changed since the cache was created
-                if (sha1(Filesystem::read($dependencyFile)) !== $dependencyFileHash) {
+                if (sha1(FileSystem::read($dependencyFile)) !== $dependencyFileHash) {
                     return null;
                 }
             }
