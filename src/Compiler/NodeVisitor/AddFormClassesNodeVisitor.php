@@ -88,6 +88,35 @@ final class AddFormClassesNodeVisitor extends NodeVisitorAbstract implements For
     public function enterNode(Node $node): ?Node
     {
         if ($node instanceof Assign) {
+            // nette/forms 3.3 starts a form with begin($form = $this->global->uiControl['name'])
+            if ($node->var instanceof Variable && $node->var->name === 'form'
+                && $node->expr instanceof ArrayDimFetch
+                && $node->expr->dim instanceof String_
+                && $this->isUiControl($node->expr->var)
+            ) {
+                $formName = $node->expr->dim->value;
+                $formClassName = $this->formClassNames[$formName] ?? null;
+                $this->actualForm = $this->forms[$formName] ?? null;
+                if ($formClassName === null) {
+                    $this->actualForm = new Form($formName, new ObjectType('Nette\Forms\Form'));
+                    $error = new Error('Form with name "' . $formName . '" probably does not exist.');
+                    return new Assign(
+                        new Variable('form'),
+                        new ArrayDimFetch(
+                            new Array_([
+                                new ArrayItem(new New_(new Name('Nette\Forms\Form'))),
+                                new ArrayItem($error->toNode()->expr),
+                            ]),
+                            new LNumber(0)
+                        )
+                    );
+                }
+
+                return new Assign(new Variable('form'), new StaticCall(new Name(FormHelper::class), 'getForm', [
+                    new Arg(new ClassConstFetch(new Name($formClassName), 'class')),
+                ]));
+            }
+
             if (!$node->expr instanceof Assign) {
                 return null;
             }
@@ -155,36 +184,32 @@ final class AddFormClassesNodeVisitor extends NodeVisitorAbstract implements For
                         return null;
                     }
                     $itemArgument = $node->getArgs()[0] ?? null;
-                    $itemArgumentValue = $itemArgument ? $itemArgument->value : null;
-
-                    $formControl = null;
-                    if ($itemArgumentValue instanceof String_ || $itemArgumentValue instanceof LNumber) {
-                        $controlName = (string)$itemArgumentValue->value;
-                        // TODO remove when container are supported
-                        $controlNameParts = explode('-', $controlName);
-                        $controlName = end($controlNameParts);
-                        $formControl = $this->actualForm->getControl($controlName);
-                        if ($formControl === null) {
-                            $this->errorControlNodes[] = [
-                                'node' => $this->findParentStmt($node),
-                                'control' => $controlName,
-                            ];
-                            return null;
-                        }
-                    } elseif ($itemArgumentValue instanceof Variable) {
+                    if ($itemArgument === null) {
                         return null;
                     }
-                    $attributes = $node->getAttributes();
-                    if ($formControl !== null) {
-                        $attributes['formControl'] = $formControl;
-                    }
-                    return new ArrayDimFetch(
-                        new Variable('form'),
-                        $itemArgumentValue,
-                        $attributes
-                    );
+                    return $this->createFormControlFetch($itemArgument->value, $node->getAttributes(), $node);
                 }
             }
+        } elseif ($node instanceof MethodCall) {
+            // nette/forms 3.3 compiles {input}, {label} and {formContainer} to
+            // $this->global->forms->get(...) and ends forms with renderFormEnd()
+            if ($this->isFormsRuntimeMethod($node, 'renderFormEnd')) {
+                $this->actualForm = null;
+                return null;
+            }
+            if ($this->actualForm === null || !$this->isFormsRuntimeGet($node)) {
+                return null;
+            }
+
+            $itemArgument = $node->getArgs()[0] ?? null;
+            if ($itemArgument === null) {
+                return null;
+            }
+
+            if ($this->isFormsRuntimeGetContainer($node)) {
+                return $this->createFormContainerFetch($itemArgument->value, $node->getAttributes(), $node);
+            }
+            return $this->createFormControlFetch($itemArgument->value, $node->getAttributes(), $node);
         } elseif ($node instanceof ArrayDimFetch) {
             if ($this->actualForm === null) {
                 return null;
@@ -311,11 +336,16 @@ final class AddFormClassesNodeVisitor extends NodeVisitorAbstract implements For
             $methodCallVar = $methodCallExpr->var;
             $methodCalls = [$methodCallExpr];
             while ($methodCallVar instanceof MethodCall) {
+                if ($this->isFormsRuntimeGet($methodCallVar)) {
+                    break;
+                }
                 $methodCalls[] = $methodCallVar;
                 $methodCallVar = $methodCallVar->var;
             }
 
-            if ($methodCallVar instanceof StaticCall && $this->nameResolver->resolve($methodCallVar->class) === 'Nette\Bridges\FormsLatte\Runtime' && $this->nameResolver->resolve($methodCallVar->name) === 'item') {
+            if (($methodCallVar instanceof StaticCall && $this->nameResolver->resolve($methodCallVar->class) === 'Nette\Bridges\FormsLatte\Runtime' && $this->nameResolver->resolve($methodCallVar->name) === 'item') ||
+                ($methodCallVar instanceof MethodCall && $this->isFormsRuntimeGet($methodCallVar))
+            ) {
                 $newMethodCallVar = new Variable($varName);
                 $newMethodCall = null;
                 foreach (array_reverse($methodCalls) as $methodCall) {
@@ -351,13 +381,18 @@ final class AddFormClassesNodeVisitor extends NodeVisitorAbstract implements For
             /** @var MethodCall $methodCallExpr */
             $methodCallExpr = $node->exprs[0]->expr;
             $methodCallVar = $methodCallExpr->var;
-            $methodCalls[] = $methodCallExpr;
+            $methodCalls = [$methodCallExpr];
             while ($methodCallVar instanceof MethodCall) {
+                if ($this->isFormsRuntimeGet($methodCallVar)) {
+                    break;
+                }
                 $methodCalls[] = $methodCallVar;
                 $methodCallVar = $methodCallVar->var;
             }
 
-            if ($methodCallVar instanceof StaticCall && $this->nameResolver->resolve($methodCallVar->class) === 'Nette\Bridges\FormsLatte\Runtime' && $this->nameResolver->resolve($methodCallVar->name) === 'item') {
+            if (($methodCallVar instanceof StaticCall && $this->nameResolver->resolve($methodCallVar->class) === 'Nette\Bridges\FormsLatte\Runtime' && $this->nameResolver->resolve($methodCallVar->name) === 'item') ||
+                ($methodCallVar instanceof MethodCall && $this->isFormsRuntimeGet($methodCallVar))
+            ) {
                 $newMethodCallVar = new Variable($varName);
                 $newMethodCall = null;
                 foreach (array_reverse($methodCalls) as $methodCall) {
@@ -386,6 +421,30 @@ final class AddFormClassesNodeVisitor extends NodeVisitorAbstract implements For
             $arg = $node->getArgs()[0] ?? null;
             if ($arg instanceof Arg && $this->isFormsStack($arg->value)) {
                 return new Variable('form');
+            }
+        }
+
+        /**
+         * Replace:
+         * <code>
+         * echo $this->global->forms->begin($form = $this->global->uiControl['firstForm'], global: $this->global);
+         * </code>
+         *
+         * With:
+         * <code>
+         * $form = ...;
+         * $this->global->forms->begin($form, global: $this->global);
+         * </code>
+         */
+        if ($node instanceof Expression && $node->expr instanceof MethodCall && $this->isFormsRuntimeMethod($node->expr, 'begin')) {
+            $formArgument = $node->expr->getArgs()[0] ?? null;
+            if ($formArgument !== null && $formArgument->value instanceof Assign &&
+                $formArgument->value->var instanceof Variable && $formArgument->value->var->name === 'form'
+            ) {
+                $assign = new Expression($formArgument->value);
+                $assign->setAttributes($node->getAttributes());
+                $formArgument->value = new Variable('form');
+                return [$assign, $node];
             }
         }
 
@@ -584,6 +643,131 @@ final class AddFormClassesNodeVisitor extends NodeVisitorAbstract implements For
         }
 
         return true;
+    }
+
+    private function isFormsRuntimeGet(MethodCall $node): bool
+    {
+        return $this->isFormsRuntimeMethod($node, 'get');
+    }
+
+    private function isFormsRuntimeGetContainer(MethodCall $node): bool
+    {
+        $typeArgument = $node->getArgs()[1] ?? null;
+        if ($typeArgument === null || !$typeArgument->value instanceof ClassConstFetch) {
+            return false;
+        }
+        if ($this->nameResolver->resolve($typeArgument->value->name) !== 'class') {
+            return false;
+        }
+        return $this->nameResolver->resolve($typeArgument->value->class) === 'Nette\Forms\Container';
+    }
+
+    private function isFormsRuntimeMethod(MethodCall $node, string $method): bool
+    {
+        if (!$node->name instanceof Identifier || $node->name->toString() !== $method) {
+            return false;
+        }
+
+        $forms = $node->var;
+        if (!$forms instanceof PropertyFetch || !$forms->name instanceof Identifier || $forms->name->toString() !== 'forms') {
+            return false;
+        }
+
+        $global = $forms->var;
+        if (!$global instanceof PropertyFetch || !$global->name instanceof Identifier || $global->name->toString() !== 'global') {
+            return false;
+        }
+
+        return $global->var instanceof Variable && $global->var->name === 'this';
+    }
+
+    /**
+     * Replaces forms->get(<control>) and Runtime::item(<control>) with $form[<control>].
+     *
+     * @param array<string, mixed> $attributes
+     */
+    private function createFormControlFetch(Expr $itemArgumentValue, array $attributes, Node $node): ?ArrayDimFetch
+    {
+        // dynamic item can also be a control object, keep the get()/item() call
+        if ($itemArgumentValue instanceof Variable) {
+            return null;
+        }
+
+        $formControl = null;
+        if ($itemArgumentValue instanceof String_ || $itemArgumentValue instanceof LNumber) {
+            $controlName = (string)$itemArgumentValue->value;
+            // TODO remove when containers are supported
+            $controlNameParts = explode('-', $controlName);
+            $controlName = end($controlNameParts);
+            $formControl = $this->actualForm !== null ? $this->actualForm->getControl($controlName) : null;
+            if ($formControl === null) {
+                $this->errorControlNodes[] = [
+                    'node' => $this->findParentStmt($node),
+                    'control' => $controlName,
+                ];
+                return null;
+            }
+        }
+
+        if ($formControl !== null) {
+            $attributes['formControl'] = $formControl;
+        }
+        return new ArrayDimFetch(
+            new Variable('form'),
+            $itemArgumentValue,
+            $attributes
+        );
+    }
+
+    /**
+     * Replaces forms->get(<container>, Nette\Forms\Container::class) with $form[<container>]
+     * only when the generated form class knows the concrete container type.
+     *
+     * @param array<string, mixed> $attributes
+     */
+    private function createFormContainerFetch(Expr $itemArgumentValue, array $attributes, Node $node): ?ArrayDimFetch
+    {
+        if ($itemArgumentValue instanceof String_ || $itemArgumentValue instanceof LNumber) {
+            $controlName = (string)$itemArgumentValue->value;
+        } elseif ($itemArgumentValue instanceof PropertyFetch) {
+            $varName = $this->nameResolver->resolve($itemArgumentValue->var);
+            $propertyName = $this->nameResolver->resolve($itemArgumentValue->name);
+            if ($varName === null || $propertyName === null) {
+                return null;
+            }
+            $controlName = '$' . $varName . '->' . $propertyName;
+        } else {
+            // dynamic item can also be a container object
+            return null;
+        }
+
+        // TODO remove when containers are supported
+        if ($itemArgumentValue instanceof PropertyFetch) {
+            $lookupName = $controlName;
+        } else {
+            $controlNameParts = explode('-', $controlName);
+            $lookupName = end($controlNameParts);
+        }
+        $formControl = $this->actualForm !== null ? $this->actualForm->getControl($lookupName) : null;
+        if ($formControl === null) {
+            $this->errorControlNodes[] = [
+                'node' => $this->findParentStmt($node),
+                'control' => $lookupName,
+            ];
+            return null;
+        }
+
+        if (!$formControl instanceof Container || $lookupName !== $controlName) {
+            // keep get(..., Container::class), it is already typed as Container
+            return null;
+        }
+
+        $attributes['formControl'] = $formControl;
+        return new ArrayDimFetch(
+            new Variable('form'),
+            $itemArgumentValue,
+            $attributes
+        );
     }
 
     private function isFormsStack(Expr $expr): bool

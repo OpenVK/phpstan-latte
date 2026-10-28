@@ -10,11 +10,13 @@ use Efabrica\PHPStanLatte\Compiler\NodeVisitor\Behavior\ExprTypeNodeVisitorInter
 use Efabrica\PHPStanLatte\Resolver\NameResolver\NameResolver;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
+use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\ArrayDimFetch;
 use PhpParser\Node\Expr\Assign;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\Variable;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\NodeVisitorAbstract;
 
@@ -50,6 +52,23 @@ final class TransformFormStackToGetFormNodeVisitor extends NodeVisitorAbstract i
             return null;
         }
 
+        // nette/forms 3.3: {form $formName} compiles to begin($form = $this->global->uiControl[$formName])
+        if ($node->expr instanceof ArrayDimFetch) {
+            $dim = $node->expr->dim;
+            if ($dim instanceof Variable && $this->isUiControl($node->expr->var)) {
+                $dimType = $this->getType($dim);
+                if (!$dimType) {
+                    return null;
+                }
+                return new Assign($node->var, new StaticCall(new Name(FormHelper::class), 'getForm', [
+                    new Arg(new ArrayDimFetch(
+                        new PropertyFetch(new PropertyFetch(new Variable('this'), 'global'), 'formNamesToFormClasses'),
+                        $dim
+                    )),
+                ]), $node->getAttributes());
+            }
+        }
+
         if (!$node->expr instanceof Assign) {
             return null;
         }
@@ -73,5 +92,19 @@ final class TransformFormStackToGetFormNodeVisitor extends NodeVisitorAbstract i
         return new Assign($node->var, new StaticCall(new Name(FormHelper::class), 'getForm', [
             new Arg(new ArrayDimFetch(new PropertyFetch(new PropertyFetch(new Variable('this'), 'global'), 'formNamesToFormClasses'), $dim->dim)),
         ]), $node->getAttributes());
+    }
+
+    private function isUiControl(Expr $expr): bool
+    {
+        if (!$expr instanceof PropertyFetch || !$expr->name instanceof Identifier) {
+            return false;
+        }
+        if ($this->nameResolver->resolve($expr->name) !== 'uiControl') {
+            return false;
+        }
+        if (!$expr->var instanceof PropertyFetch || !$expr->var->name instanceof Identifier) {
+            return false;
+        }
+        return $this->nameResolver->resolve($expr->var->name) === 'global';
     }
 }
