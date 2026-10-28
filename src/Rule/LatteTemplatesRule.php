@@ -39,6 +39,7 @@ use function count;
 use function dirname;
 use function get_class;
 use function in_array;
+use function is_array;
 use function is_dir;
 use function is_file;
 use function is_string;
@@ -355,10 +356,18 @@ final class LatteTemplatesRule implements Rule
             }
 
             $phpstanCommand = str_replace('{dir}', $analysedTemplatesDir, $this->phpstanCommand) . ' --error-format json';
-            $phpstanOutput = shell_exec($phpstanCommand) ?: '{}';
+            $phpstanOutput = shell_exec($phpstanCommand);
 
-            /** @var array{files?: array<string, array{messages: array<array{message: string, line: int, ignorable: bool, tip?: string}>}>} $originalErrors */
-            $originalErrors = json_decode($phpstanOutput, true);
+            /** @var array{files?: array<string, array{messages: array<array{message: string, line: int, ignorable: bool, tip?: string}>}>}|null $originalErrors */
+            $originalErrors = is_string($phpstanOutput) ? json_decode($phpstanOutput, true) : null;
+            if (!is_array($originalErrors)) {
+                $diagnostics = shell_exec($phpstanCommand . ' 2>&1');
+                throw new ShouldNotHappenException(sprintf(
+                    "Nested PHPStan analysis failed, so no template errors could be collected.\nCommand: %s\nOutput: %s",
+                    $phpstanCommand,
+                    substr((string) $diagnostics, 0, 4000)
+                ));
+            }
             foreach ($originalErrors['files'] ?? [] as $analysedFilePath => $originalFileErrors) {
                 $compileFilePath = $analysedToCompiledMap[$analysedFilePath] ?? $analysedFilePath;
                 $template = $templates[$compileFilePath] ?? null;
