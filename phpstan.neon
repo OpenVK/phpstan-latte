@@ -166,6 +166,7 @@ parameters:
                 - '#^Parameter \#1 \$feature of method Latte\\Engine\:\:hasFeature\(\) expects string, mixed given\.$#'
                 - '#^Possibly invalid array key type mixed\.$#'
                 - '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+                - '#^Binary operation "\." between mixed and .* results in an error\.$#'
                 - '#^Call to an undefined method Latte\\Engine\:\:getExtensions\(\)\.$#'
                 - '#^Call to an undefined method Latte\\Engine\:\:getFunctions\(\)\.$#'
                 - '#^Parameter \$extensions of method Efabrica\\PHPStanLatte\\Compiler\\Compiler\\Latte3Compiler\:\:installExtensions\(\) has invalid type Latte\\Extension\.$#'

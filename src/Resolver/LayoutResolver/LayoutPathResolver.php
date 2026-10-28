@@ -15,6 +15,7 @@ use function stripcslashes;
 use function strlen;
 use function trim;
 use const DIRECTORY_SEPARATOR;
+use const PREG_OFFSET_CAPTURE;
 
 final class LayoutPathResolver
 {
