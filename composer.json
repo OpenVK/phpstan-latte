@@ -1,6 +1,5 @@
 {
     "name": "efabrica/phpstan-latte",
-    "version": "0.20.1",
     "license": ["MIT"],
     "keywords": [
         "static analysis"
