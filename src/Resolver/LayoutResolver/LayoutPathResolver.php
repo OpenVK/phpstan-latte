@@ -6,9 +6,9 @@ namespace Efabrica\PHPStanLatte\Resolver\LayoutResolver;
 
 use function dirname;
 use function file_get_contents;
+use function is_file;
 use function preg_match;
 use function realpath;
-use function str_contains;
 use function str_replace;
 use function str_starts_with;
 use function stripcslashes;
@@ -32,7 +32,7 @@ final class LayoutPathResolver
             return null;
         }
 
-        if ($templatePath === null) {
+        if ($templatePath === null || !is_file($templatePath)) {
             return null;
         }
 
@@ -112,9 +112,10 @@ final class LayoutPathResolver
         if (preg_match('/^"((?:[^"\\\\$]|\\\\.)*)"$/s', $expression, $match) === 1) {
             return stripcslashes($match[1]);
         }
-        // Latte also accepts bare layout file names such as ../@layout.latte
-        if (preg_match('/^[^\s,()\[\]\$\'"{}]+$/', $expression) === 1
-            && (str_contains($expression, '/') || str_contains($expression, '.'))) {
+        // unquoted literal name (including extensionless names and ../@layout.latte);
+        // variables, calls, arrays and constants are expressions
+        if (preg_match('/^\$|[(\[]|->|::|[\'"]/', $expression) !== 1
+            && preg_match('/^[^\s,}]+$/', $expression) === 1) {
             return $expression;
         }
 

@@ -146,6 +146,16 @@ final class NetteApplicationUIPresenter extends AbstractClassTemplateResolver
                         ->line($actionDefinition['line']));
                     continue;
                 }
+                if (!is_file($template)) {
+                    $errorBuilder = RuleErrorBuilder::message('Template ' . $template . ' does not exist.')
+                        ->identifier('latte.notFound');
+                    $presenterFile = $classReflection->getFileName();
+                    if ($presenterFile !== null && is_file($presenterFile)) {
+                        $errorBuilder->file($presenterFile);
+                    }
+                    $result->addErrorFromBuilder($errorBuilder);
+                    continue;
+                }
                 $result->addTemplate(new Template($template, $classReflection->getName(), $actionName, $actionDefinition['templateContext']));
 
                 $layoutFilePath = $this->layoutPathResolver->resolve($template);

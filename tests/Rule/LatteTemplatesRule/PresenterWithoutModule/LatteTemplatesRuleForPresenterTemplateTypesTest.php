@@ -23,6 +23,11 @@ final class LatteTemplatesRuleForPresenterTemplateTypesTest extends LatteTemplat
     {
         $this->analyse([__DIR__ . '/Fixtures/TemplateTypesPresenter.php'], [
             [
+                'Skipped 1 variant(s) of template ' . __DIR__ . '/Fixtures/templates/TemplateTypes/other.latte because of latte.maxTemplateVariants.',
+                -1,
+                'other.latte',
+            ],
+            [
                 'Undefined variable: $undefinedVariable',
                 2,
                 'other.latte',

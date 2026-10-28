@@ -23,6 +23,16 @@ final class LatteTemplatesRuleForPresenterBreakIncludeCyclesTest extends LatteTe
     {
         $this->analyse([__DIR__ . '/Fixtures/RecursionPresenter.php'], [
             [
+                'Skipped 1 recursive include(s) of template ' . __DIR__ . '/Fixtures/templates/Recursion/indirectRecursion.latte because of latte.breakIncludeCycles.',
+                -1,
+                'indirectRecursion.latte',
+            ],
+            [
+                'Skipped 1 recursive include(s) of template ' . __DIR__ . '/Fixtures/templates/Recursion/recursion.latte because of latte.breakIncludeCycles.',
+                -1,
+                'recursion.latte',
+            ],
+            [
                 'Dumped type: 9',
                 1,
                 '@indirectRecursionB.latte',

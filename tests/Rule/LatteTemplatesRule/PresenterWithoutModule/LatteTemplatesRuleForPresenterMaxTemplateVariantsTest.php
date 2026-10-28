@@ -23,6 +23,21 @@ final class LatteTemplatesRuleForPresenterMaxTemplateVariantsTest extends LatteT
     {
         $this->analyse([__DIR__ . '/Fixtures/RecursionPresenter.php'], [
             [
+                'Skipped 2 variant(s) of template ' . __DIR__ . '/Fixtures/templates/@layout.latte because of latte.maxTemplateVariants.',
+                -1,
+                '@layout.latte',
+            ],
+            [
+                'Skipped 1 variant(s) of template ' . __DIR__ . '/Fixtures/templates/Recursion/indirectRecursion.latte because of latte.maxTemplateVariants.',
+                -1,
+                'indirectRecursion.latte',
+            ],
+            [
+                'Skipped 1 variant(s) of template ' . __DIR__ . '/Fixtures/templates/Recursion/recursion.latte because of latte.maxTemplateVariants.',
+                -1,
+                'recursion.latte',
+            ],
+            [
                 'Dumped type: 9',
                 1,
                 '@indirectRecursionB.latte',

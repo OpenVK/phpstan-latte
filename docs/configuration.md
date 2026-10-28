@@ -197,7 +197,7 @@ Type: `int`
 
 Maximum number of variants analysed for a single template path during one run. `0` means no limit.
 Lowering it bounds memory and time on include-heavy projects at the cost of skipping some template
-variants.
+variants. Skipped variants are reported as warnings so gaps stay visible.
 
 Default:
 ```neon
@@ -210,7 +210,7 @@ parameters:
 Type: `bool`
 
 When enabled, an `{include}` that would recurse into the template itself or into one of its parents
-is skipped instead of being analysed again.
+is skipped instead of being analysed again. Skipped recursive includes are reported as warnings.
 
 Default:
 ```neon

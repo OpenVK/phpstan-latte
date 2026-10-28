@@ -3090,6 +3090,17 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
         ]);
     }
 
+    public function testMissingSetFile(): void
+    {
+        $this->analyse([__DIR__ . '/Fixtures/SetFileMissingPresenter.php'], [
+            [
+                'Template ' . __DIR__ . '/Fixtures/templates/SetFileMissing/missing.latte does not exist.',
+                -1,
+                'SetFileMissingPresenter.php',
+            ],
+        ]);
+    }
+
     public function testEscapes(): void
     {
         if (!LatteVersion::isLatte31()) {

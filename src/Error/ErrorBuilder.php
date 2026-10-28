@@ -184,7 +184,7 @@ final class ErrorBuilder
             if ($ruleError instanceof MetadataRuleError) {
                 $metaData = $ruleError->getMetadata();
             }
-            $metaData['is_warning'] = $this->isWarning($ruleError->getMessage());
+            $metaData['is_warning'] = $metaData['is_warning'] ?? $this->isWarning($ruleError->getMessage());
             $newRuleError->metadata($metaData);
 
             if ($ruleError instanceof FileRuleError) {

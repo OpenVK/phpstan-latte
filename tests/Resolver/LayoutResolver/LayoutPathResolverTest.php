@@ -47,6 +47,14 @@ final class LayoutPathResolverTest extends TestCase
         );
     }
 
+    public function testResolvesExtensionlessBareLayout(): void
+    {
+        self::assertSame(
+            realpath(__DIR__ . '/Fixtures/main'),
+            $this->resolver->resolve(__DIR__ . '/Fixtures/with-extensionless.latte')
+        );
+    }
+
     public function testLayoutNoneDisablesLayout(): void
     {
         self::assertNull($this->resolver->resolve(__DIR__ . '/Fixtures/with-none.latte'));
