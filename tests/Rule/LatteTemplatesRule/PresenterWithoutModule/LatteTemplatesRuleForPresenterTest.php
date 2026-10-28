@@ -1205,17 +1205,19 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                     'default.latte',
                 ];
             } else {
-                $expectedErrors[] = [
-                    'Parameter #1 $item of static method Nette\\Bridges\\FormsLatte\\Runtime::item() expects int|object|string, mixed given.',
-                    142,
-                    'default.latte',
-                ];
-                $expectedErrors[] = [
-                    'Unable to resolve the template type T in call to static method Nette\\Bridges\\FormsLatte\\Runtime::item()',
-                    142,
-                    'default.latte',
-                    'See: https://phpstan.org/blog/solving-phpstan-error-unable-to-resolve-template-type',
-                ];
+                if (DependencyVersion::phpstanAtLeast23()) {
+                    $expectedErrors[] = [
+                        'Parameter #1 $item of static method Nette\\Bridges\\FormsLatte\\Runtime::item() expects int|object|string, mixed given.',
+                        142,
+                        'default.latte',
+                    ];
+                    $expectedErrors[] = [
+                        'Unable to resolve the template type T in call to static method Nette\\Bridges\\FormsLatte\\Runtime::item()',
+                        142,
+                        'default.latte',
+                        'See: https://phpstan.org/blog/solving-phpstan-error-unable-to-resolve-template-type',
+                    ];
+                }
                 $expectedErrors[] = [
                     'PHPDoc tag @var with type Nette\\Forms\\Controls\\BaseControl is not subtype of type Nette\\Forms\\Controls\\TextArea.',
                     55,
@@ -1358,19 +1360,6 @@ final class LatteTemplatesRuleForPresenterTest extends LatteTemplatesRuleTest
                 55,
                 'default.latte',
             ];
-            if (!DependencyVersion::netteFormsAtLeast33()) {
-                $expectedErrors[] = [
-                    'Parameter #1 $item of static method Nette\\Bridges\\FormsLatte\\Runtime::item() expects int|object|string, mixed given.',
-                    142,
-                    'default.latte',
-                ];
-                $expectedErrors[] = [
-                    'Unable to resolve the template type T in call to static method Nette\\Bridges\\FormsLatte\\Runtime::item()',
-                    142,
-                    'default.latte',
-                    'See: https://phpstan.org/blog/solving-phpstan-error-unable-to-resolve-template-type',
-                ];
-            }
         }
         if (DependencyVersion::phpstanAtLeast23()) {
             // PHPStan 2.3 dead-code checks on nette/forms 3.1 generated template code
